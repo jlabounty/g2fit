@@ -7,6 +7,8 @@ import pickle
 import boost_histogram as bh 
 import ast
 
+from global_params import GlobalParams
+
 
 class rootToBoost(law.Task):
     '''
@@ -16,14 +18,12 @@ class rootToBoost(law.Task):
 
     infile = luigi.Parameter()
     histName = luigi.Parameter(default="corrected")
-    campaignName = luigi.Parameter(default="test")
-    outputDir = luigi.Parameter(default="./data/")
 
     timeAxis = luigi.Parameter(default='x')
     axisCuts = luigi.Parameter(default=None, description="['axis string', lower bound, upper bound] -> ['y', 1700, 3200]")
 
     def output(self):
-        return law.LocalFileTarget(f"{self.outputDir}{self.campaignName}_{self.histName.replace('/','_')}.pickle")
+        return law.LocalFileTarget(f"{GlobalParams().outputDir}{GlobalParams().campaignName}_{self.histName.replace('/','_')}.pickle")
 
     def run(self):
         output = self.output()
