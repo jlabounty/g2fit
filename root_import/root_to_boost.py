@@ -23,7 +23,7 @@ class rootToBoost(law.Task):
     axisCuts = luigi.Parameter(default=None, description="['axis string', lower bound, upper bound] -> ['y', 1700, 3200]")
 
     def output(self):
-        return law.LocalFileTarget(f"{GlobalParams().outputDir}{GlobalParams().campaignName}_{self.histName.replace('/','_')}.pickle")
+        return law.LocalFileTarget(f"{GlobalParams().outputDir}{GlobalParams().campaignName}_{self.histName.replace('/','_')}_{self.axisCuts}.pickle")
 
     def run(self):
         output = self.output()
