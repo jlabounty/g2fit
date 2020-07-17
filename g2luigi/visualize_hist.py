@@ -13,15 +13,18 @@ from global_params import GlobalParams
 
 class visualizeInputHist(law.Task):
     '''
-        Takes the output from root_to_boost and visualizes it. Just as a test of luigis ability to schedule/parallelize things.
+        Takes the output from root_to_boost and visualizes it. 
+        Just as a test of luigis ability to schedule/parallelize things.
     '''
 
     def requires(self):
         for elow in range(500,2300,100):
+            #using yield means that this can be parallelized across N workers 
+            #   ('--workers N'  on command line)
             yield rootToBoost(axisCuts="[['y', "+str(elow)+", "+str(elow+100)+"]]")
 
     def output(self):
-        return law.LocalFileTarget(GlobalParams().outputDir+"output_plots.pickle")
+        return law.LocalFileTarget(GlobalParams().outputDir+GlobalParams().campaignName+"_output_hist.pickle")
 
     def run(self):
         input = self.input()

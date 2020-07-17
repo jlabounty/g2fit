@@ -51,16 +51,18 @@ class rootToBoost(law.Task):
             try:
                 ding = ast.literal_eval(self.axisCuts)
                 print("ding", ding, ding[0])
+                print([type(xi) for xi in ding])
                 for axis, lowerBound, upperBound in ding:
                     print(axis,lowerBound,upperBound)
                     if('x' in axis):
                         hi.GetXaxis().SetRangeUser(lowerBound,upperBound)
                     if('y' in axis):
+                        print(hi)
                         hi.GetYaxis().SetRangeUser(lowerBound,upperBound)
                     if('z' in axis):
                         hi.GetZaxis().SetRangeUser(lowerBound,upperBound)
             except:
-                print("what the literal fuck")
+                raise ValueError("ERROR: Unable to properly set axis limits with ", ding)
         hi_1D = hi.Project3D(self.timeAxis).Clone(self.histName.replace("/","_")+"_1Dprojection")
         # print(hi_1D)
 

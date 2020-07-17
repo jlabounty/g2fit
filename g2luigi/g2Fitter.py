@@ -22,10 +22,19 @@ from BlindersPy3 import FitType
 class g2Fitter():
 
     def getBlinded(self,blinding_string = "Test Blinding"):
+        '''
+            Function which interfaces with the g-2 blinding software. 
+            Checks if blinding function is defined and (if necessary) creates/returns it
+        '''
         # blinding_string = 'This is my fight song. Blinding my plot song.'
-        return Blinders(FitType.Omega_a, blinding_string)
+        if(self.blind is None):
+            self.blind =  Blinders(FitType.Omega_a, blinding_string)
+        return self.blind
 
     def blinded_5par(self,x,p):
+        '''
+            Five parameter g-2 omega_a fit
+        '''
         # print(self, type(self))
         self.parNames = ['N', '#tau', 'A', 'R', '#phi']
         norm  = p[0]
@@ -39,12 +48,14 @@ class g2Fitter():
         
         return norm * np.exp(-time/life) * (1 - asym*np.cos(omega*time + phi))
     
+    #fit functions must be registered here in order for them to be used
     def fit_functions(self, name):
         dicti = {
             "5par":self.blinded_5par
         }
         return dicti[name]
 
+    #cost functions must be registered here in order for them to be used
     def cost_functons(self,name):
         dict_cost_functons = {
             "LeastSquares":LeastSquares
@@ -59,10 +70,11 @@ class g2Fitter():
 
     def __init__(self, fit_name, cost_name, blinding_string, boost_hist, initial_guess, 
                        xlims=None, useError=True, verbose=1):
+        self.blind = None
         self.fit_name = fit_name
         self.cost_name = cost_name 
         self.blinding_string = blinding_string
-        self.h = boost_hist.copy() #ensure that we can picke things up at the end by creating copy
+        self.h = boost_hist.copy() #ensure that we can pack things up at the end by creating copy
         self.initial_guess = initial_guess
 
         if(xlims is not None):
@@ -82,10 +94,15 @@ class g2Fitter():
 
         # self.fit_function = self.fit_functions[self.fit_name]
         self.fit_function = (self.getFunc())
+        #initialize fit function by evaluating once on initial guess
+        print(self.fit_function(np.array([10]),self.initial_guess))
+        
 
     def do_fit(self, nFit=2):
         print("Starting fit...")
-        cost_function = (self.getCost())(self.x,self.y,self.yerr, self.fit_function, verbose=1)
+
+        #TODO: #1 When minuit is pickleable, can transition these to being class functions and ax 'load_fit'
+        cost_function = (self.getCost())(self.x,self.y,self.yerr, self.fit_function, verbose=0)
         m = Minuit.from_array_func( cost_function, start=self.initial_guess, 
                                name=self.parNames, errordef=1)
         print(m.params)
@@ -107,8 +124,8 @@ class g2Fitter():
 
     # get around the fact that we can't save the fit object directly by loading it back up when we need it.
     def load_fit(self, nFit=2):
-        print("WARNING: You will not be able to pickle this file")
-        cost_function = (self.getCost())(self.x,self.y,self.yerr, self.fit_function, verbose=1)
+        print("WARNING: You will not be able to pickle this file after executing this function")
+        cost_function = (self.getCost())(self.x,self.y,self.yerr, self.fit_function, verbose=0)
         self.m = Minuit.from_array_func(cost_function, self.values, name=self.parNames, **self.fitarg)
         for i in range(nFit):
             self.m.migrad()
@@ -129,24 +146,24 @@ class g2Fitter():
 
 
 # test output
-infile = "../root_import/data/test2_clustersAndCoincidences_corrected_[['y', 2100, 2200]].pickle"
-input_hist = pickle.load(open(infile,"rb"))['clustersAndCoincidences/corrected']
+# infile = "../root_import/data/test2_clustersAndCoincidences_corrected_[['y', 2100, 2200]].pickle"
+# input_hist = pickle.load(open(infile,"rb"))['clustersAndCoincidences/corrected']
 
-print(type(input_hist))
+# print(type(input_hist))
 
-ding = g2Fitter("5par","LeastSquares","test", input_hist, [1090000,64.4,0.33,0,-1.2], [30,300])
-print(ding, type(ding))
-print(ding.fit_function)
-print(ding.fit_function(np.array([10,11,12]),[10,1,0.33,0,0]))
+# ding = g2Fitter("5par","LeastSquares","test", input_hist, [1090000,64.4,0.33,0,-1.2], [30,300])
+# print(ding, type(ding))
+# print(ding.fit_function)
+# print(ding.fit_function(np.array([10,11,12]),[10,1,0.33,0,0]))
 
-ding.do_fit()
-# ding.plot_result()
+# ding.do_fit()
+# # ding.plot_result()
 
-pickle.dump(ding,open("./test_fit_output.pickle","wb"), protocol=2)
-ding2 = pickle.load(open("./test_fit_output.pickle","rb"))
-print(ding2)
+# pickle.dump(ding,open("./test_fit_output.pickle","wb"), protocol=2)
+# ding2 = pickle.load(open("./test_fit_output.pickle","rb"))
+# print(ding2)
 
-ding2.load_fit()
-print(ding2.m.values)
+# ding2.load_fit()
+# print(ding2.m.values)
 
-print("All done!")
+# print("All done!")
