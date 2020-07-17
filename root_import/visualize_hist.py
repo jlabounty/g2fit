@@ -13,7 +13,7 @@ from global_params import GlobalParams
 
 class visualizeInputHist(law.Task):
     '''
-        Takes the output from root_to_boost and visualizes it. Just as a test of luigis ability to schedule things.
+        Takes the output from root_to_boost and visualizes it. Just as a test of luigis ability to schedule/parallelize things.
     '''
 
     def requires(self):
