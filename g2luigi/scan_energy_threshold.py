@@ -17,7 +17,7 @@ from g2Fitter import *
 # We can overload the main functions to pass the energy range as input
 # ----------------------------------------------------------------------
 
-#overload the fitter so that it passes the 
+#overload the fitter so that it passes the axisCuts on
 class g2FitHistEnergyScan(g2FitHist):
   axisCuts = luigi.Parameter(default=None, description="['axis string', lower bound, upper bound] -> ['y', 1700, 3200]")
   def requires(self):
@@ -27,26 +27,39 @@ class energyScan(law.Task):
 
     eLow = luigi.FloatParameter(default=1000.)
     eHigh = luigi.FloatParameter(default=3000.)
-    eWidth = luigi.FloatParameter(default=100.)
+    eWidth = luigi.FloatParameter(default=500.)
+    nWorkers = luigi.FloatParameter(default=1)
+
 
     def requires(self):
-        for energy in np.arange(self.eLow, self.eHigh, self.eWidth):
+        self.elows = np.arange(self.eLow, self.eHigh, self.eWidth)
+        for energy in self.elows:
             thiscut = str([['y',energy, energy+self.eWidth]])
             print(thiscut)
             yield g2FitHistEnergyScan(axisCuts=thiscut)
 
     def output(self):
-        return law.LocalFileTarget(GlobalParams().outputDir+GlobalParams().campaignName+"_output_hist_energyScan.pickle")
+        return law.LocalFileTarget(GlobalParams().outputDir+GlobalParams().campaignName+"_workers_"+str(self.nWorkers)+"_output_hist_energyScan.pickle")
     
     def run(self):
         input = self.input()
         print("Raw input:", input)
 
-        fig,axs = plt.subplots(int(np.ceil(len(input)/4)), 4,figsize=(15,25), sharex=True, sharey=False)
-        ax = flatten2dArray(axs)
+        nrows = int(np.ceil(len(input)/4))
+        fig,axs = plt.subplots(nrows, 4,figsize=(15,25), sharex=True, sharey=False)
+        if(nrows > 1):
+            ax = flatten2dArray(axs)
+        else:
+            ax = axs
+
+        print(fig,ax)
 
         hists = []
         for i, inputi in enumerate(input):
+
+            elow = self.elows[i]
+            ehigh = elow + self.eWidth
+
             print("Input for the second task:", inputi.path)
 
             opened_hist = pickle.load(open(inputi.path,"rb"))
@@ -57,21 +70,24 @@ class energyScan(law.Task):
 
             thisHist = opened_hist[ histName ]
 
-            print(thisHist)
-            print(thisHist.x)
+            # print(thisHist)
+            # print(thisHist.x)
 
             plt.sca(ax[i])
-            plt.title(str(thisHist.axisCuts))
-            print(thisHist.values)
+            # plt.title(str(thisHist.axisCuts))
+            print(thisHist.fit_function)
+            plt.title("Energy: "+str(elow)+" - "+str(ehigh)+" MeV")
+            # print(thisHist.values)
             ding = plt.plot(thisHist.x, thisHist.y, label="Data")
-            dong = plt.plot(thisHist.x, thisHist.fit_function(thisHist.x, thisHist.values), label="Fit")
+            dong = plt.plot(thisHist.x, thisHist.fity, label="Fit:\n"+str(thisHist.values).replace(" ","\n"))
             # dong=3
-            hists.append([ding,dong])
-            plt.legend(ncol=2)
+            hists.append([ding,dong,thisHist.values, thisHist.fit_function(thisHist.x, thisHist.values)])
+            plt.legend(ncol=1)
             plt.yscale("log")
             plt.grid()
 
+        plt.tight_layout()
         plt.show()
 
-        data = {'plot':(fig,ax), 'hists':hists }
+        data = {'plot':(fig,ax), 'hists':hists, "fit":thisHist.fit_function(thisHist.x, thisHist.values) }
         self.output().dump(data, formatter="pickle")

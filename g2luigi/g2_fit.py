@@ -6,7 +6,7 @@ import ROOT as r
 import pickle
 import boost_histogram as bh 
 import ast
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 from root_to_boost import rootToBoost
 from global_params import GlobalParams
@@ -18,6 +18,8 @@ class g2FitHist(law.Task):
     '''
         Takes an output from root_to_boost and fits it in the luigi pipeline
     '''
+
+    sandbox = "bash::fit_env.sh"
 
     xlims = luigi.Parameter(default=None)
     # parNames = luigi.Parameter()
@@ -34,7 +36,7 @@ class g2FitHist(law.Task):
         return rootToBoost()
 
     def output(self):
-        return law.LocalFileTarget(GlobalParams().outputDir+GlobalParams().campaignName+"_output_fit.pickle")
+        return law.LocalFileTarget(GlobalParams().outputDir+GlobalParams().campaignName+"_worker_"+str(self.task_id)+"_output_fit.pickle")
 
     def run(self):
         input = self.input()
@@ -56,10 +58,10 @@ class g2FitHist(law.Task):
 
         #create the fitter
         fit = g2Fitter(self.whichFit, self.whichCost, self.blindingString, thisHist, 
-                       initial_guess=parGuess_parsed, xlims=xlims_parsed  )
+                       initial_guess=parGuess_parsed, xlims=xlims_parsed, uniqueName=str(self.task_id) )
         print("This fit:", fit)
         fit.do_fit() #execute the minimization
-        print(fit.fitarg)
+        # print(fit.fitarg)
 
         data = {histName:fit}
         self.output().dump(data, formatter="pickle")

@@ -12,3 +12,11 @@ class GlobalParams(luigi.Config):
     date = luigi.DateParameter(default=datetime.date.today())
     campaignName = luigi.Parameter()
     outputDir = luigi.Parameter()
+
+    # config vars parsed in order specified by the luigi docs
+    config = luigi.configuration.get_config()
+
+    # the additional core defaults, when not specifying config
+    core = luigi.interface.core(config)
+
+    print(core.workers)
