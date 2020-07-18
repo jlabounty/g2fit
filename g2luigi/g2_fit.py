@@ -61,6 +61,7 @@ class g2FitHist(law.Task):
                        initial_guess=parGuess_parsed, xlims=xlims_parsed, uniqueName=str(self.task_id) )
         print("This fit:", fit)
         fit.do_fit() #execute the minimization
+        fit.make_pickleable() #delete the objects which can't be stored in pickle format
         # print(fit.fitarg)
 
         data = {histName:fit}
