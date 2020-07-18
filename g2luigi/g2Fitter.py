@@ -88,6 +88,7 @@ class g2Fitter():
     #fit functions must be registered here in order for them to be used
     def fit_functions(self, name):
         dicti = {
+            "custom":None,
             "5par":self.blinded_5par,
             "13par":self.blinded_13par
         }
@@ -117,7 +118,8 @@ class g2Fitter():
 
     def __init__(self, fit_name, cost_name, blinding_string, boost_hist, initial_guess, 
                        xlims=None, useError=True, verbose=1, uniqueName="", do_iterative_fit=False,
-                       fit_list=None, fit_limits = None, final_unlimited_fit = False):
+                       fit_list=None, fit_limits = None, final_unlimited_fit = False,
+                       custom_func=None, parNames=None):
         self.uniqueName = uniqueName
         self.blind = None
         self.fit_name = fit_name
@@ -150,7 +152,14 @@ class g2Fitter():
             self.xerr = None
 
         # self.fit_function = self.fit_functions[self.fit_name]
-        self.fit_function = (self.getFunc())
+        if(self.fit_name is not "custom"):
+            self.fit_function = (self.getFunc())
+        else:
+            self.fit_function = custom_func 
+            if(parNames is not None):
+                self.parNames = parNames
+            else:
+                self.parNames = ["x"+str(i) for i in range(len(self.initial_guess))]
         #initialize fit function by evaluating once on initial guess
         print(self.fit_function(np.array([10]),self.initial_guess))
         print(self)
