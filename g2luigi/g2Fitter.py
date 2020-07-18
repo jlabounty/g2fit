@@ -144,6 +144,7 @@ class g2Fitter():
         else:
             self.binlims = [0, len(self.h.axes[0].centers)]
 
+        print("wifjewrionvr3eoinm")
         self.x = self.h.axes[0].centers[self.binlims[0]:self.binlims[1]]
         self.y = self.h.view().value[self.binlims[0]:self.binlims[1]]
         if(useError):
@@ -152,6 +153,7 @@ class g2Fitter():
             self.yerr = None 
         self.xerr = None
 
+        print('cwiuhnfi3unr')
         # self.fit_function = self.fit_functions[self.fit_name]
         if(self.fit_name is not "custom"):
             self.fit_function = (self.getFunc())
@@ -160,8 +162,9 @@ class g2Fitter():
             if(parNames is not None):
                 self.parNames = parNames
             else:
-                self.parNames = ["x"+str(i) for i in range(len(self.initial_guess))]
+                self.parNames = ["p"+str(i) for i in range(len(self.initial_guess))]
         #initialize fit function by evaluating once on initial guess
+        print("inoeifnoerinf")
         print(self.fit_function(np.array([10]),self.initial_guess))
         print(self)
 
@@ -259,7 +262,7 @@ class g2Fitter():
         # self.m = Minuit.from_array_func( self.cost_function, start=self.initial_guess, 
         #                        name=self.parNames, errordef=1)
         self.m = (self.getMinuit())( self.cost_function, start=self.initial_guess, 
-                                     name=self.parNames, errordef=1)
+                                     name=self.parNames, errordef=1, limit=self.fit_limits)
 
         
         print(self.m, self.cost_function)
@@ -291,7 +294,7 @@ class g2Fitter():
         for i in range(nFit):
             self.m.migrad()
 
-    def make_pickleale(self):
+    def make_pickleable(self):
         del self.m 
         del self.cost_function
 

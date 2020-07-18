@@ -27,6 +27,7 @@ class g2FitHist(law.Task):
     whichCost = luigi.Parameter()
     initialGuess = luigi.Parameter()
     blindingString = luigi.Parameter()
+    parameterLimits = luigi.Parameter(default=None)
 
     def requires(self):
         # for elow in range(500,2300,100):
@@ -53,22 +54,27 @@ class g2FitHist(law.Task):
         xlims_parsed = [float(x) for x in ast.literal_eval(self.xlims)]
         # parNames_parsed = ast.literal_eval(self.parNames)
         parGuess_parsed = [float(x) for x in ast.literal_eval(self.initialGuess)]
+
+        parLimits_parsed = ast.literal_eval(self.parameterLimits)
+        
         print(xlims_parsed)
         print(parGuess_parsed)
+        print(parLimits_parsed)
 
         #create the fitter
         fit = g2Fitter(self.whichFit, self.whichCost, self.blindingString, thisHist, 
-                       initial_guess=parGuess_parsed, xlims=xlims_parsed, uniqueName=str(self.task_id) )
+                       initial_guess=parGuess_parsed, xlims=xlims_parsed, uniqueName=str(self.task_id),
+                       fit_limits=parLimits_parsed )
         print("This fit:", fit)
         fit.do_fit() #execute the minimization
+
+        # fit.m.draw_mncontour("A","R")
+        # plt.show()
+
         fit.make_pickleable() #delete the objects which can't be stored in pickle format
-        # print(fit.fitarg)
+        print(fit.fitarg)
 
         data = {histName:fit}
         self.output().dump(data, formatter="pickle")
-
-        # fit.load_fit()
-        # fit.m.draw_mncontour("A","R")
-        # plt.show()
         
         print("Fit complete!")
