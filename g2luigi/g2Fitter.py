@@ -117,7 +117,7 @@ class g2Fitter():
 
     def __init__(self, fit_name, cost_name, blinding_string, boost_hist, initial_guess, 
                        xlims=None, useError=True, verbose=1, uniqueName="", do_iterative_fit=False,
-                       fit_list=None, fit_limits = None):
+                       fit_list=None, fit_limits = None, final_unlimited_fit = False):
         self.uniqueName = uniqueName
         self.blind = None
         self.fit_name = fit_name
@@ -128,7 +128,11 @@ class g2Fitter():
         self.do_iterative_fit = do_iterative_fit
         self.fit_list = fit_list 
         self.intermediate_values = []
-        self.fit_limits = fit_limits
+        if(fit_limits is not None):
+            self.fit_limits = fit_limits
+        else:
+            self.fit_limits = [None for i in range(len(self.initial_guess))]
+        self.final_fit_unlimited = final_unlimited_fit
 
         if(xlims is not None):
             self.xlims=xlims
@@ -171,11 +175,6 @@ class g2Fitter():
         else:
             #for the iterative fit, loop over the parameters and unmask them iteratively using the same minuit object
             self.iterative_fit(nFit)
-    
-    def set_fit_limits(self, m):
-        # assert len(self.fit_limits) == len(self.initial_guess)
-        # m.limit = self.fit_limits
-        print("Limits set!")
 
     def iterative_fit(self, nFit=2):
         print("Starting iterative fit")
@@ -186,8 +185,6 @@ class g2Fitter():
         #                        name=self.parNames, errordef=1)
         self.m = (self.getMinuit())( self.cost_function, start=self.initial_guess, 
                                      name=self.parNames, errordef=1, limit=self.fit_limits)
-        if(self.fit_limits is not None):
-            self.set_fit_limits(self.m)
         
         print(self.m, self.cost_function)
         print(self.m.params)
@@ -207,8 +204,25 @@ class g2Fitter():
 
             print(self.m.params)
 
-        # del self.m 
-        # del self.cost_function
+        if(self.final_fit_unlimited):
+            #if this option is set, do a final unlimited fit
+            # self.m.limits[:] = [None for i in range(len(self.initial_guess))]
+            theseargs = self.m.fitarg
+            print(theseargs)
+            for key in theseargs:
+                if("limit_" in key):
+                    theseargs[key] = None
+            print(theseargs)
+
+            #unable to unset limits in minuit??? so have to create a new object...
+            self.m = (self.getMinuit())(self.cost_function, start=self.initial_guess, name=self.parNames, **theseargs)
+
+            for i in range(nFit):
+                self.m.migrad()
+            self.m.hesse()
+            self.store_fit_values(self.m)
+
+            print(self.m.params)
 
         print("All done!")
 
@@ -222,8 +236,6 @@ class g2Fitter():
         self.m = (self.getMinuit())( self.cost_function, start=self.initial_guess, 
                                      name=self.parNames, errordef=1)
 
-        if(self.fit_limits is not None):
-            self.set_fit_limits(self.m)
         
         print(self.m, self.cost_function)
         print(self.m.params)
