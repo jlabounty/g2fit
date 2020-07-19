@@ -21,7 +21,7 @@ from g2Fitter import *
 # ----------------------------------------------------------------------
 
 #overload the fitter so that it passes the axisCuts on
-class g2FitHistEnergyScan(g2FitHist):
+class g2FitHistAxisCuts(g2FitHist):
   axisCuts = luigi.Parameter(default=None, description="['axis string', lower bound, upper bound] -> ['y', 1700, 3200]")
   def requires(self):
     return rootToBoost(axisCuts=self.axisCuts) 
@@ -38,7 +38,7 @@ class energyScanNAsquare(law.Task):
         for energy in self.elows:
             thiscut = str([['y',energy, energy+self.eWidth]])
             print(thiscut)
-            yield g2FitHistEnergyScan(axisCuts=thiscut)
+            yield g2FitHistAxisCuts(axisCuts=thiscut)
 
     def output(self):
         return law.LocalFileTarget(GlobalParams().outputDir+GlobalParams().campaignName+"_workers_"+str(self.nWorkers)+"_output_hist_energyScan.pickle")

@@ -89,8 +89,8 @@ class g2Fitter():
     def fit_functions(self, name):
         dicti = {
             "custom":None,
-            "5par":self.blinded_5par,
-            "13par":self.blinded_13par
+            "5par"  :self.blinded_5par,
+            "13par" :self.blinded_13par
         }
         return dicti[name]
 
@@ -121,6 +121,7 @@ class g2Fitter():
                        xlims=None, useError=True, verbose=1, uniqueName="", do_iterative_fit=False,
                        fit_list=None, fit_limits = None, final_unlimited_fit = False,
                        custom_func=None, parNames=None):
+        print("Initializing fit!")
         self.uniqueName = uniqueName
         self.blind = None
         self.fit_name = fit_name
@@ -140,11 +141,11 @@ class g2Fitter():
         if(xlims is not None):
             self.xlims=xlims
             self.binlims = [self.h.axes[0].index(x) for x in xlims]
-            print(xlims, "->",self.binlims)
+            self.xlims_true = [self.h.axes[0].bin(x) for x in self.binlims]
+            print(xlims, "->",self.binlims, "(",self.xlims_true,")")
         else:
             self.binlims = [0, len(self.h.axes[0].centers)]
 
-        print("wifjewrionvr3eoinm")
         self.x = self.h.axes[0].centers[self.binlims[0]:self.binlims[1]]
         self.y = self.h.view().value[self.binlims[0]:self.binlims[1]]
         if(useError):
@@ -153,7 +154,6 @@ class g2Fitter():
             self.yerr = None 
         self.xerr = None
 
-        print('cwiuhnfi3unr')
         # self.fit_function = self.fit_functions[self.fit_name]
         if(self.fit_name is not "custom"):
             self.fit_function = (self.getFunc())
@@ -163,10 +163,10 @@ class g2Fitter():
                 self.parNames = parNames
             else:
                 self.parNames = ["p"+str(i) for i in range(len(self.initial_guess))]
+
         #initialize fit function by evaluating once on initial guess
-        print("inoeifnoerinf")
-        print(self.fit_function(np.array([10]),self.initial_guess))
-        print(self)
+        self.fit_function(np.array([10]),self.initial_guess)
+        # print(self)
 
     def store_fit_values(self, m):
         self.values = m.np_values()
@@ -213,7 +213,7 @@ class g2Fitter():
         self.m = (self.getMinuit())( self.cost_function, start=self.initial_guess, 
                                      name=self.parNames, errordef=1, limit=self.fit_limits)
         
-        print(self.m, self.cost_function)
+        # print(self.m, self.cost_function)
         print(self.m.params)
         #loop over the parameters which should be masked + a final unmasked version
         for mask in self.fit_list+[len(self.initial_guess)]:
