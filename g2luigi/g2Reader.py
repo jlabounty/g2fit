@@ -38,10 +38,71 @@ class g2Histogram():
 
         print("starting zip")
 
-        self.zipped = self.zip_3d(self.uproot_hist.allvalues, self.uproot_hist.allvariances )
+        self.zipped = self.zip(self.uproot_hist.allvalues, self.uproot_hist.allvariances )
         self.h[:,:,:] = self.zipped
         print("done!")
 
+    def project(self,dimension=0, xlims=None, ylims=None, zlims=None):
+        '''
+            Implements projection of the contained boost-histogram object with x/y/z limits
+        '''
+        if(type(dimension) is str):
+            # translate dimensions strings into numbers
+            dimdict = {"x":0, "y":1, "z":2, "xy":(0,1), "xz":(0,2), "yz":(1,2)}
+            try:
+                dimension = dimdict[dimension]
+            except:
+                raise ValueError("ERROR: Dimensional arrangement not found in", dimdict)
+        
+        #translate limits into cuts on the histogram
+        theselims = []
+        for i,lim in enumerate([xlims, ylims, zlims]):
+            if lim is not None:
+                theselims.append( [self.h.axes[i].index(xlims[0]), self.h.axes[i].index(xlims[1])] )
+            else:
+                theselims.append( [0, self.h.axes[i].size])
+        print("Projecting with:", [xlims, ylims,zlims],"->",theselims)
+
+        #make projection
+        hi = self.h[bh.loc(theselims[0][0]):bh.loc(theselims[0][1]), 
+                    bh.loc(theselims[1][0]):bh.loc(theselims[1][1]), 
+                    bh.loc(theselims[2][0]):bh.loc(theselims[2][1]), ].project(dimension)
+        return hi
+
+    
+    def zip(self, a, b):
+        zipdict = {
+            1:self.zip_1d,
+            2:self.zip_2d,
+            3:self.zip_3d
+        }
+        return zipdict[self.ndim](a,b)
+
+    @staticmethod
+    @jit(nopython=True)
+    def zip_1d(a,b):
+        '''
+            We can jit this to make it a bit faster.
+            Turns the uproot hist into the correct boost format by combining means/variances into one object
+        '''
+        output = np.zeros((*a.shape,2))
+        for i, a1 in enumerate(a):
+            for j, a2 in enumerate(a1):
+                    output[i,j] = [a3, b[i,j]]
+        return output
+
+    @staticmethod
+    @jit(nopython=True)
+    def zip_2d(a,b):
+        '''
+            We can jit this to make it a bit faster.
+            Turns the uproot hist into the correct boost format by combining means/variances into one object
+        '''
+        output = np.zeros((*a.shape,2))
+        for i, a1 in enumerate(a):
+            for j, a2 in enumerate(a1):
+                output[i,j] = [a3, b[i,j]]
+        return output
 
     @staticmethod
     @jit(nopython=True)

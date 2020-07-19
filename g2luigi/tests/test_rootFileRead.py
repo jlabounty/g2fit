@@ -23,5 +23,10 @@ ding = g2Histogram(infile, histname)
 # plt.colorbar()
 # plt.show()
 
-ding.plotprojections()
+# ding.plotprojections()
+# plt.show()
+
+hi = ding.project(0,[30,500], [1700,6000], None)
+# hi.show()
+plt.plot(hi.axes[0].centers, hi.view().value)  
 plt.show()
