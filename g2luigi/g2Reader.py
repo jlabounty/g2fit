@@ -23,14 +23,14 @@ class g2Histogram():
         #   https://readthedocs.org/projects/boost-histogram/downloads/pdf/latest/
 
         root_file = uproot.open(infile)
-        self.uproot_hist = root_file[histname]
-        print(self.uproot_hist)
-        print(type(self.uproot_hist.edges))
+        uproot_hist = root_file[histname]
+        print(uproot_hist)
+        print(type(uproot_hist.edges))
 
-        self.ndim = len(self.uproot_hist.edges)
+        self.ndim = len(uproot_hist.edges)
 
         boost_axes = []
-        for axis in self.uproot_hist.edges:
+        for axis in uproot_hist.edges:
             boost_axes.append( bh.axis.Variable(axis) )
         # uproot_hist.show()
 
@@ -38,7 +38,7 @@ class g2Histogram():
 
         print("starting zip")
 
-        self.zipped = self.zip(self.uproot_hist.allvalues, self.uproot_hist.allvariances )
+        self.zipped = self.zip(uproot_hist.allvalues, uproot_hist.allvariances )
         self.h[:,:,:] = self.zipped
         print("done!")
 
