@@ -650,7 +650,7 @@ class g2Fitter():
         if(xrange is not None):
             ax.set_xlim(xrange[0], xrange[1])
         if(labelFit):
-            leg = ax.legend(ncol=1, loc=4, fontsize=20*(1-(len(self.values)/25)))
+            leg = ax.legend(ncol=1, loc=4, fontsize=20*(1-(len(self.values)/28.)))
             leg.set_zorder(37)
         ax.set_ylabel(data_title)
 
