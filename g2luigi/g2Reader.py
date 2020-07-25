@@ -145,13 +145,15 @@ class g2Histogram():
         self.h[:,:,:] = self.zip( *self.rootHistToNumpy(root_hist) )
         print("All done!")
 
-    def project(self,dimension=0, xlims=None, ylims=None, zlims=None):
+    def project(self,dimension=[0], xlims=None, ylims=None, zlims=None):
         '''
             Implements projection of the contained boost-histogram object with x/y/z limits
         '''
+        if(type(dimension) is int):
+            dimension = [dimension]
         if(type(dimension) is str):
             # translate dimensions strings into numbers
-            dimdict = {"x":0, "y":1, "z":2, "xy":(0,1), "xz":(0,2), "yz":(1,2)}
+            dimdict = {"x":(0), "y":(1), "z":(2), "xy":(0,1), "xz":(0,2), "yz":(1,2)}
             try:
                 dimension = dimdict[dimension]
             except:
@@ -167,9 +169,14 @@ class g2Histogram():
         print("Projecting with:", [xlims, ylims,zlims],"->",theselims)
 
         #make projection, currently 3D only
-        hi = self.h[bh.loc(theselims[0][0]):bh.loc(theselims[0][1]), 
-                    bh.loc(theselims[1][0]):bh.loc(theselims[1][1]), 
-                    bh.loc(theselims[2][0]):bh.loc(theselims[2][1]), ].project(dimension)
+        sliceDict = {}
+        for i,lim in enumerate(theselims):
+            if(i in dimension):
+                sliceDict[i] = slice(lim[0],lim[1])
+            else:
+                sliceDict[i] = slice(lim[0],lim[1], sum)
+        hi = self.h[sliceDict]
+        # hi2 = hi.project(*dimension)
         return hi
 
     
@@ -257,7 +264,10 @@ class g2Histogram():
             return plt.pcolormesh(*h.axes.edges.T, h.view().value.T, norm=norm)
         elif(hist is not None): #add utility for ploting any hist, i.e. Kloss histogram
             h = hist
-            return plt.pcolormesh(*h.axes.edges.T, h.view().T, norm=norm)
+            try:
+                return plt.pcolormesh(*h.axes.edges.T, h.view().T, norm=norm)
+            except:
+                return plt.pcolormesh(*h.axes.edges.T, h.view().value.T, norm=norm)
         else:
             raise ValueError("Histogram axes are incorrect. Try again with axes=[0,1] for example")
 

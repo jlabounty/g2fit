@@ -10,7 +10,8 @@ import ast
 import numpy as np
 
 #iMinuit fitting
-from  iminuit.cost import LeastSquares
+from iminuit.cost import LeastSquares
+from iminuit.cost import ExtendedBinnedNLL
 from matplotlib import pyplot as plt
 from iminuit import Minuit
 
@@ -84,20 +85,225 @@ class g2Fitter():
         
         return norm * np.exp(-time/life) * cCBO * (1 - ACBO*np.cos(omega*time + phiCBO))
 
+    def blinded_17par(self,x,p):
+        '''
+            17-parameter g-2 omega_a fit, incorporating CBO and VW terms.
+            We can set these up such that when masked the parameters can be set to 0
+        '''
+        npars = 17
+        assert len(self.initial_guess) == npars
+        self.parNames = ['N', '#tau', 'A', 'R', '#phi', 'A_{CBO - N}', 'A_{CBO - A}', 'A_{CBO - #phi}', 
+                         '#tau_{CBO}', '#omega_{CBO}', '#phi_{CBO - N}', '#phi_{CBO - A}', '#phi_{CBO - #phi}',
+                         "A_{VW}", "#tau_{VW}", "#omega_{VW}", "#phi_{VW}"]
+
+
+        norm     = p[0]
+        life     = p[1]
+        asym     = p[2]
+        R        = p[3]
+        phi      = p[4]
+        A1       = p[5]
+        A2       = p[6]
+        A3       = p[7]
+        lifeCBO  = p[8]
+        omegaCBO = p[9]
+        phiCBO1  = p[10]
+        phiCBO2  = p[11]
+        phiCBO3  = p[12]
+        Avw      = p[13]
+        lifeVW   = p[14]
+        omegaVW  = p[15]
+        phiVW    = p[16]
+        
+        time  = x
+        omega = self.getBlinded(self.blinding_string).paramToFreq(R)
+        
+        cCBO = 1-np.exp(-time/lifeCBO)*A1*np.cos(omegaCBO*time + phiCBO1)
+        ACBO = asym * (1 - np.exp(-time/lifeCBO) * A2 * np.cos(omegaCBO*time + phiCBO2))
+        phiCBO = phi + np.exp(-time/lifeCBO)*A3*np.cos(omegaCBO*time + phiCBO3)
+        cVW = 1 - Avw*np.exp(-time/lifeVW)*np.cos(omegaVW*time + phiVW)
+        
+        return norm * np.exp(-time/life) * cCBO * cVW * (1 - ACBO*np.cos(omega*time + phiCBO))
+
+    def blinded_18par(self,x,p):
+        '''
+            18-parameter g-2 omega_a fit, incorporating CBO, VW, and Kloss terms.
+            We can set these up such that when masked the parameters can be set to 0
+        '''
+        npars = 18
+        assert len(self.initial_guess) == npars
+        assert (self.h_Kloss is not None)
+        self.parNames = ['N', '#tau', 'A', 'R', '#phi', 
+                         'A_{CBO - N}', 'A_{CBO - A}', 'A_{CBO - #phi}', 
+                         '#tau_{CBO}', '#omega_{CBO}', '#phi_{CBO - N}', '#phi_{CBO - A}', '#phi_{CBO - #phi}',
+                         "A_{VW}", "#tau_{VW}", "#omega_{VW}", "#phi_{VW}", 
+                         "K_{loss}"]
+
+
+        norm     = p[0]
+        life     = p[1]
+        asym     = p[2]
+        R        = p[3]
+        phi      = p[4]
+        A1       = p[5]
+        A2       = p[6]
+        A3       = p[7]
+        lifeCBO  = p[8]
+        omegaCBO = p[9]
+        phiCBO1  = p[10]
+        phiCBO2  = p[11]
+        phiCBO3  = p[12]
+        Avw      = p[13]
+        lifeVW   = p[14]
+        omegaVW  = p[15]
+        phiVW    = p[16]
+        Kloss    = p[17]
+        
+        time  = x
+        omega = self.getBlinded(self.blinding_string).paramToFreq(R)
+        
+        cCBO = 1-np.exp(-time/lifeCBO)*A1*np.cos(omegaCBO*time + phiCBO1)
+        ACBO = asym * (1 - np.exp(-time/lifeCBO) * A2 * np.cos(omegaCBO*time + phiCBO2))
+        phiCBO = phi + np.exp(-time/lifeCBO)*A3*np.cos(omegaCBO*time + phiCBO3)
+        cVW = 1 - Avw*np.exp(-time/lifeVW)*np.cos(omegaVW*time + phiVW)
+        
+        return (
+                norm * np.exp(-time/life) * cCBO * cVW * (1 - ACBO*np.cos(omega*time + phiCBO))
+                * ( 1 - Kloss*np.interp(time, self.h_Kloss.axes[0].centers, self.h_Kloss.view() ))
+               )
+
+    def blinded_21par(self,x,p):
+        '''
+            21-parameter g-2 omega_a fit, incorporating CBO, VW, 2*CBO, and Kloss terms.
+            We can set these up such that when masked the parameters can be set to 0
+        '''
+        npars = 21
+        assert len(self.initial_guess) == npars
+        assert (self.h_Kloss is not None)
+        self.parNames = ['N', '#tau', 'A', 'R', '#phi', 
+                         'A_{CBO - N}', 'A_{CBO - A}', 'A_{CBO - #phi}', 
+                         '#tau_{CBO}', '#omega_{CBO}', '#phi_{CBO - N}', '#phi_{CBO - A}', '#phi_{CBO - #phi}',
+                         "A_{VW}", "#tau_{VW}", "#omega_{VW}", "#phi_{VW}", 
+                         "K_{loss}",
+                         "A_{2-CBO}", "#tau_{2-CBO}", "#phi_{2-CBO}"]
+
+
+        norm     = p[0]
+        life     = p[1]
+        asym     = p[2]
+        R        = p[3]
+        phi      = p[4]
+        A1       = p[5]
+        A2       = p[6]
+        A3       = p[7]
+        lifeCBO  = p[8]
+        omegaCBO = p[9]
+        phiCBO1  = p[10]
+        phiCBO2  = p[11]
+        phiCBO3  = p[12]
+        Avw      = p[13]
+        lifeVW   = p[14]
+        omegaVW  = p[15]
+        phiVW    = p[16]
+        Kloss    = p[17]
+        A2CBO    = p[18]
+        life2CBO = p[19]
+        phi2CBO  = p[20]
+        
+        time  = x
+        omega = self.getBlinded(self.blinding_string).paramToFreq(R)
+        
+        cCBO = 1-np.exp(-time/lifeCBO)*A1*np.cos(omegaCBO*time + phiCBO1)
+        ACBO = asym * (1 - np.exp(-time/lifeCBO) * A2 * np.cos(omegaCBO*time + phiCBO2))
+        phiCBO = phi + np.exp(-time/lifeCBO)*A3*np.cos(omegaCBO*time + phiCBO3)
+        cVW = 1 - Avw*np.exp(-time/lifeVW)*np.cos(omegaVW*time + phiVW)
+        c2CBO = 1 - A2CBO*np.exp(-time/life2CBO)*np.cos(omegaCBO*time + phi2CBO)
+        
+        return (
+                norm * np.exp(-time/life) * cCBO * cVW * (1 - ACBO*np.cos(omega*time + phiCBO))
+                * ( 1 - Kloss*np.interp(time, self.h_Kloss.axes[0].centers, self.h_Kloss.view() ))
+                * c2CBO
+               )
+
+    def blinded_25par(self,x,p):
+        '''
+            25-parameter g-2 omega_a fit, incorporating CBO, VW, 2*CBO, Vy, and Kloss terms.
+            We can set these up such that when masked the parameters can be set to 0
+        '''
+        npars = 25
+        assert len(self.initial_guess) == npars
+        assert (self.h_Kloss is not None)
+        self.parNames = ['N', '#tau', 'A', 'R', '#phi', 
+                         'A_{CBO - N}', 'A_{CBO - A}', 'A_{CBO - #phi}', 
+                         '#tau_{CBO}', '#omega_{CBO}', '#phi_{CBO - N}', '#phi_{CBO - A}', '#phi_{CBO - #phi}',
+                         "A_{VW}", "#tau_{VW}", "#omega_{VW}", "#phi_{VW}", 
+                         "K_{loss}",
+                         "A_{2-CBO}", "#tau_{2-CBO}", "#phi_{2-CBO}",
+                         "A_{y}", "#tau_{y}", "#omega_{y}", "#phi_{y}"]
+
+
+        norm     = p[0]
+        life     = p[1]
+        asym     = p[2]
+        R        = p[3]
+        phi      = p[4]
+        A1       = p[5]
+        A2       = p[6]
+        A3       = p[7]
+        lifeCBO  = p[8]
+        omegaCBO = p[9]
+        phiCBO1  = p[10]
+        phiCBO2  = p[11]
+        phiCBO3  = p[12]
+        Avw      = p[13]
+        lifeVW   = p[14]
+        omegaVW  = p[15]
+        phiVW    = p[16]
+        Kloss    = p[17]
+        A2CBO    = p[18]
+        life2CBO = p[19]
+        phi2CBO  = p[20]
+        Ay       = p[21]
+        lifey    = p[22]
+        omegay   = p[23]
+        phiy     = p[24]
+        
+        time  = x
+        omega = self.getBlinded(self.blinding_string).paramToFreq(R)
+        
+        cCBO = 1-np.exp(-time/lifeCBO)*A1*np.cos(omegaCBO*time + phiCBO1)
+        ACBO = asym * (1 - np.exp(-time/lifeCBO) * A2 * np.cos(omegaCBO*time + phiCBO2))
+        phiCBO = phi + np.exp(-time/lifeCBO)*A3*np.cos(omegaCBO*time + phiCBO3)
+        cVW = 1 - Avw*np.exp(-time/lifeVW)*np.cos(omegaVW*time + phiVW)
+        cy = 1 - Ay*np.exp(-time/lifey)*np.cos(omegay*time + phiy)
+        c2CBO = 1 - A2CBO*np.exp(-time/life2CBO)*np.cos(omegaCBO*time + phi2CBO)
+        
+        return (
+                norm * np.exp(-time/life) * cCBO * cVW * (1 - ACBO*np.cos(omega*time + phiCBO))
+                * ( 1 - Kloss*np.interp(time, self.h_Kloss.axes[0].centers, self.h_Kloss.view() ))
+                * c2CBO * cy
+               )
+
+
     
     #fit functions must be registered here in order for them to be used
     def fit_functions(self, name):
         dicti = {
             "custom":None,
             "5par"  :self.blinded_5par,
-            "13par" :self.blinded_13par
+            "13par" :self.blinded_13par,
+            '17par' :self.blinded_17par,
+            "18par" :self.blinded_18par,
+            "21par" :self.blinded_21par,
+            "25par" :self.blinded_25par
         }
         return dicti[name]
 
     #cost functions must be registered here in order for them to be used
     def cost_functons(self,name):
         dict_cost_functons = {
-            "LeastSquares":LeastSquares
+            "LeastSquares":LeastSquares,
+            "NLL":ExtendedBinnedNLL
             #TODO: #2 Add custom minimizer which takes advantage of the kernel method
         }
         return dict_cost_functons[name]
@@ -117,17 +323,39 @@ class g2Fitter():
     def getMinuit(self):
         return self.minuit('minuit_array')
 
+    def triples_to_Kloss(self, triples_hist, tau=64.4):
+        h = bh.Histogram(*triples_hist.axes)
+        # print(h)
+        h[:] = ( triples_hist.view()*np.exp( h.axes[0].centers / tau ) )
+        h[:] = np.cumsum(h[:].view()) 
+        h[:] = h[:].view() / np.sum(h[:].view())
+        
+        # raise ValueError
+
+        return h
+
     def __init__(self, fit_name, cost_name, blinding_string, boost_hist, initial_guess, 
                        xlims=None, useError=True, verbose=1, uniqueName="", do_iterative_fit=False,
                        fit_list=None, fit_limits = None, final_unlimited_fit = False,
-                       custom_func=None, parNames=None):
+                       custom_func=None, parNames=None, triples_hist=None):
         print("Initializing fit!")
+
         self.uniqueName = uniqueName
-        self.blind = None
         self.fit_name = fit_name
         self.cost_name = cost_name 
         self.blinding_string = blinding_string
+        self.blind = None # to be set up later once we initialize the fit
+
+        #we expect the boost_hist to be 1D
+        print(boost_hist.axes.size, boost_hist.ndim)
+        assert (boost_hist.ndim is 1)
         self.h = boost_hist.copy() #ensure that we can pack things up at the end by creating copy
+        if(triples_hist is not None):
+            assert (triples_hist.ndim is 1) #Kloss hist should also be 1D
+            self.h_Kloss = self.triples_to_Kloss( triples_hist )
+            
+        else:
+            self.h_Kloss = None
         self.initial_guess = initial_guess
         self.do_iterative_fit = do_iterative_fit
         self.fit_list = fit_list 
@@ -138,8 +366,8 @@ class g2Fitter():
             self.fit_limits = [None for i in range(len(self.initial_guess))]
         self.final_fit_unlimited = final_unlimited_fit
 
+        self.xlims=xlims
         if(xlims is not None):
-            self.xlims=xlims
             self.binlims = [self.h.axes[0].index(x) for x in xlims]
             self.xlims_true = [self.h.axes[0].bin(x) for x in self.binlims]
             print(xlims, "->",self.binlims, "(",self.xlims_true,")")
@@ -148,10 +376,11 @@ class g2Fitter():
 
         self.x = self.h.axes[0].centers[self.binlims[0]:self.binlims[1]]
         self.y = self.h.view().value[self.binlims[0]:self.binlims[1]]
+        self.useError = useError
         if(useError):
             self.yerr = self.h.view().variance[self.binlims[0]:self.binlims[1]]
         else:
-            self.yerr = None 
+            self.yerr = 1 #needs to be non-zero for least squares minimizer to work
         self.xerr = None
 
         # self.fit_function = self.fit_functions[self.fit_name]
@@ -172,10 +401,20 @@ class g2Fitter():
         self.values = m.np_values()
         self.errors = m.np_errors()
         self.fitarg = m.fitarg
-        self.corr = m.np_matrix(correlation=True)
-        self.cov = m.np_covariance()
+        if(self.useError and m.valid):
+            self.corr = m.np_matrix(correlation=True)
+            self.cov = m.np_covariance()
+        else:
+            print("Warning: Fit might not be valid, covariance/correlation matrices not stored")
+            self.corr = None
+            self.cov = None
         self.fity = self.fit_function(self.x, self.values)
-        self.chiSquare = self.cost_function(self.values)
+        self.chiSquare = m.fval 
+        self.NDF = (len(self.y) - len(m.values))
+        if(self.NDF is not 0):
+            self.reducedChiSquare = self.chiSquare / self.NDF
+        else:
+            self.reducedChiSquare = np.nan
 
         if(self.do_iterative_fit):
             self.intermediate_values.append( [self.values, self.errors, self.fitarg, self.chiSquare, self.initial_guess] )
@@ -198,8 +437,12 @@ class g2Fitter():
         self.pulls = np.divide((self.y - self.fity), (self.yerr), out=np.zeros_like(self.y), where=self.yerr!=0)
 
         #compute the ones which lie in the fit range
-        self.residualsInRange = self.residuals[ self.h.axes[0].index(self.xlims[0]):self.h.axes[0].index(self.xlims[1]) ]
-        self.pullsInRange = self.pulls[ self.h.axes[0].index(self.xlims[0]):self.h.axes[0].index(self.xlims[1])  ]
+        if(self.xlims is not None):
+            self.residualsInRange = self.residuals[ self.h.axes[0].index(self.xlims[0]):self.h.axes[0].index(self.xlims[1]) ]
+            self.pullsInRange = self.pulls[ self.h.axes[0].index(self.xlims[0]):self.h.axes[0].index(self.xlims[1])  ]
+        else:
+            self.residualsInRange = self.residuals
+            self.pullsInRange = self.pulls
 
         print("Residuals computed!")
 
@@ -207,7 +450,10 @@ class g2Fitter():
         print("Starting iterative fit")
 
         #create a minuit object
-        self.cost_function = (self.getCost())(self.x,self.y,self.yerr, self.fit_function, verbose=0)
+        if(self.cost_name is "LeastSquares"):
+            self.cost_function = (self.getCost())(self.x,self.y,self.yerr, self.fit_function, verbose=0)
+        elif(self.cost_name is "NLL"):
+            self.cost_function = (self.getCost())(self.x,self.h.axes[0].edges, self.fit_function )
         # self.m = Minuit.from_array_func( self.cost_function, start=self.initial_guess, 
         #                        name=self.parNames, errordef=1)
         self.m = (self.getMinuit())( self.cost_function, start=self.initial_guess, 
@@ -324,11 +570,11 @@ class g2Fitter():
 
         pars = self.values
         parErrs = self.errors
-        chiSquare = self.chiSquare
+        chiSquare = self.reducedChiSquare
 
-        if(self.parNames is None):
-            parNames = ["p"+str(i) for i in range(len(pars))]
-            #parNames = [self.convertRootLabelsToPython(str(self.f.GetParName(i))) for i in range(len(pars))]
+        if(parNames is None):
+            # parNames = ["p"+str(i) for i in range(len(pars))]
+            parNames = [convertRootLabelsToPython(str(self.parNames[i])) for i in range(len(pars))]
         else:
             parNames = self.parNames
 
@@ -365,7 +611,7 @@ class g2Fitter():
 
     def draw(self,  title = "Fit Result", yrange=[None, None], xrange=None, data_title = "Data", 
                     resid_title = "Fit Pulls", do_pulls=True, fit_hist=True, fmti=".-", 
-                    draw_confidence_intervals=False):
+                    draw_confidence_intervals=False, scaleFactor=None, labelFit=True):
         '''
             Creates a figure in matplotlib and draws the fitresult / residuals on it
         '''
@@ -384,8 +630,13 @@ class g2Fitter():
         ax = axs[0]
         ax.errorbar(self.x, self.y, xerr=self.xerr, yerr=self.yerr, fmt=fmti, 
                     label="Data", ecolor='xkcd:grey', zorder=35)
-        
-        self.drawFitResult(ax, scaleFactor=int(len(self.x)*10))
+
+        if(scaleFactor is None):         
+            self.drawFitResult(ax, scaleFactor=int(len(self.x)*10))
+        elif(labelFit):
+            self.drawFitResult(ax, scaleFactor=scaleFactor)
+        else:
+            self.drawFitResult(ax, scaleFactor=scaleFactor, label=None)
         #TODO: #3 Re-implement confidence intervals
         # if(draw_confidence_intervals):
         #     self.drawConfidenceIntervals(ax,"blue", "95% Confidence Level")
@@ -398,8 +649,9 @@ class g2Fitter():
             ax.set_ylim(yrange[0][0],yrange[0][1])
         if(xrange is not None):
             ax.set_xlim(xrange[0], xrange[1])
-        leg = ax.legend(ncol=1, loc=4)
-        leg.set_zorder(37)
+        if(labelFit):
+            leg = ax.legend(ncol=1, loc=4, fontsize=20*(1-(len(self.values)/25)))
+            leg.set_zorder(37)
         ax.set_ylabel(data_title)
 
         ax = axs[1]
@@ -427,15 +679,16 @@ class g2Fitter():
         if(do_pulls and (self.yerr is not None)):
             ax.set_title("Histogram of Fit Pulls")
             hist1 = ax.hist(self.pullsInRange, bins=41)
-        else:
+        elif(np.sum(self.residualsInRange) is not np.nan):
             ax.set_title("Histogram of Fit Residuals")
             hist1 = ax.hist(self.residualsInRange, bins=41)
+
             
         # if(fit_hist):
         #     fitHistGaussian(hist1, ax, True, True)
         #     ax.legend()
 
-        plt.suptitle(title, y=1.02, fontsize=18)
+        plt.suptitle(title, y=1.0, fontsize=18)
         plt.tight_layout()
         
         return (fig, axs)
@@ -459,7 +712,6 @@ class g2Fitter():
             xn = self.x[len(self.x)-1]
             xs = np.linspace(x0,xn,scaleFactor)
             ys = self.fit_function(xs, self.values)
-
         else:
             xs = self.x
             ys = self.fity
@@ -518,7 +770,8 @@ class g2Fitter():
         plt.legend()
         return (fig,ax)
 
-    def fft(self, xrange=None, option=0, time_conversion_factor = 10**(-6), drawHist = True, logy=True):
+    def fft(self, option=1, xrange=None,  
+                  time_conversion_factor = 10**(-6), drawHist = True, logy=True):
         '''
             Performs an FFT using python on the functions stored in this class. 
             Options:
@@ -542,19 +795,22 @@ class g2Fitter():
         else:
             raise ValueError("Invalid option in fft: "+str(option))
 
-        if(xrange is not None):
-            points = []
-            xs = []
-            print("Restricting range of FFT to:", xrange)
-            if(len(xrange) is not 2):
-                raise ValueError("xrange is not well defined")
-            for i, xi in enumerate(self.x):
-                if(xi >= xrange[0] and xi <= xrange[1]):
-                    points.append(points_raw[i])
-                    xs.append(xi)
-        else:
-            xs = self.x
-            points = points_raw
+        if(xrange is None):
+            xrange = self.xlims
+
+        # if(xrange is not None):
+        points = []
+        xs = []
+        print("Restricting range of FFT to:", xrange)
+        if(len(xrange) is not 2):
+            raise ValueError("xrange is not well defined")
+        for i, xi in enumerate(self.x):
+            if(xi >= xrange[0] and xi <= xrange[1]):
+                points.append(points_raw[i])
+                xs.append(xi)
+        # else:
+        #     xs = self.x
+        #     points = points_raw
 
         ding = np.fft.fft(np.array(points))
         n = len(points)
@@ -579,3 +835,19 @@ class g2Fitter():
             plt.show()
 
         return (freq, ding)
+
+
+def convertRootLabelsToPython(label):
+        '''
+            ROOT and Python parse LaTeX slightly differently for their legends. Lets convert between them.
+        '''
+        if("#" in label or "_" in label):
+            #print(label)
+
+            ding = label.replace("#","\\")
+            ding = r"$"+ding+"$ "
+
+            #print(ding)
+            return ding
+        else:
+            return label
