@@ -109,7 +109,7 @@ class g2Histogram():
         uproot_hist = root_file[histname]
         print(uproot_hist.__dict__)
         # print(type(uproot_hist.edges))
-        self.uproot_hist = uproot_hist
+        # self.uproot_hist = uproot_hist
 
         self.ndim = len(uproot_hist.edges)
 
