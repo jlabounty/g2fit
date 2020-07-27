@@ -335,7 +335,7 @@ class g2Fitter():
         return h
 
     def __init__(self, fit_name, cost_name, blinding_string, boost_hist, initial_guess, 
-                       xlims=None, useError=True, verbose=1, uniqueName="", do_iterative_fit=False,
+                       xlims=None, useError=False, verbose=1, uniqueName="", do_iterative_fit=False,
                        fit_list=None, fit_limits = None, final_unlimited_fit = False,
                        custom_func=None, parNames=None, triples_hist=None):
         print("Initializing fit!")
@@ -380,7 +380,9 @@ class g2Fitter():
         if(useError):
             self.yerr = self.h.view().variance[self.binlims[0]:self.binlims[1]]
         else:
-            self.yerr = 1 #needs to be non-zero for least squares minimizer to work
+            #needs to be non-zero for least squares minimizer to work
+            #default to  sqrt(bin content)
+            self.yerr = np.sqrt( self.h.view().value[self.binlims[0]:self.binlims[1]] ) 
         self.xerr = None
 
         # self.fit_function = self.fit_functions[self.fit_name]
@@ -473,6 +475,7 @@ class g2Fitter():
             for i in range(nFit):
                 self.m.migrad()
             self.m.hesse()
+            self.m.minos()
             self.store_fit_values(self.m)
 
             print(self.m.params)
@@ -493,6 +496,7 @@ class g2Fitter():
             for i in range(nFit):
                 self.m.migrad()
             self.m.hesse()
+            self.m.minos()
             self.store_fit_values(self.m)
 
             print(self.m.params)
