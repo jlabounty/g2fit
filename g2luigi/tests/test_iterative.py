@@ -36,7 +36,7 @@ limits=[None, (0.1,1000), None, None, None, (-1,1) ,(-1,1), (-1,1), (0.1,1000),N
 
 fitter = g2Fitter(whichFit, whichCost, blindingString, input_hist, 
                   initialGuess, xlims, do_iterative_fit=True, fit_list=[5,8], fit_limits=limits,
-                  final_unlimited_fit=True)
+                  final_unlimited_fit=False)
 
 fitter.do_fit()
 
