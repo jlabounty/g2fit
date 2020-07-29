@@ -131,3 +131,4 @@ dmypy.json
 luigi_intro/data/*.json
 root_import/data/*.pickle
 g2luigi/data/*.pickle
+g2luigi/tests/*.pickle
