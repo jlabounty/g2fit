@@ -20,12 +20,6 @@ from g2Fitter import *
 # We can overload the main functions to pass the energy range as input
 # ----------------------------------------------------------------------
 
-#overload the fitter so that it passes the axisCuts on
-class g2FitHistAxisCuts(g2FitHist):
-  axisCuts = luigi.Parameter(default=None, description="['axis string', lower bound, upper bound] -> ['y', 1700, 3200]")
-  def requires(self):
-    return rootToBoost(axisCuts=self.axisCuts) 
-
 class energyScanNAsquare(law.Task):
 
     eLow = luigi.FloatParameter(default=400.)

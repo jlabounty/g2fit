@@ -23,7 +23,7 @@ class rootToBoost(law.Task):
     axisCuts = luigi.Parameter(default=None, description="['axis string', lower bound, upper bound] -> ['y', 1700, 3200]")
 
     def output(self):
-        return law.LocalFileTarget(f"{GlobalParams().outputDir}{GlobalParams().campaignName}_{self.histName.replace('/','_')}_{self.axisCuts}.pickle")
+        return law.LocalFileTarget(f"{GlobalParams().outputDir}{GlobalParams().campaignName}_{self.histName.replace('/','_')}_{self.axisCuts}_task_{self.task_id}.pickle")
 
     def run(self):
         output = self.output()
@@ -66,7 +66,7 @@ class rootToBoost(law.Task):
         hi_1D = hi.Project3D(self.timeAxis).Clone(self.histName.replace("/","_")+"_1Dprojection")
         # print(hi_1D)
 
-        #convert TH1X to boost_histogram format via aghast (https://github.com/scikit-hep/aghast)
+        #convert TH1X to boost_histogram format 
         hi_1D_boost = self.TH1ToBoost(hi_1D)
         # print(hi_1D_boost)
 

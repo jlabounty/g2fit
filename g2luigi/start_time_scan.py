@@ -14,7 +14,7 @@ from uncertainties.umath import *
 import matplotlib.pyplot as plt
 
 from g2Fitter import *
-from scan_energy_threshold import g2FitHistAxisCuts
+from g2_fit import g2FitHistAxisCuts
 
 
 class startTimeScan(law.Task):
@@ -28,9 +28,14 @@ class startTimeScan(law.Task):
     eLow = luigi.FloatParameter(default=1700.)
     eHigh = luigi.FloatParameter(default=3200.)
 
+    caloNum = luigi.IntParameter(default=0)
+
     def requires(self):
         self.tlows = np.arange(self.tLow, self.tHigh, self.tWidth)
-        thiscut = str([['y',self.eLow, self.eHigh]])
+        if(self.caloNum < 1):
+            thiscut = str([['y',self.eLow, self.eHigh]])
+        else:
+            thiscut = str([['z', self.caloNum-1, self.caloNum-1],['y',self.eLow, self.eHigh]])
         for time in self.tlows:
             xlims=str([time,self.tEnd])
             yield g2FitHistAxisCuts( axisCuts=thiscut, xlims=xlims )
@@ -38,6 +43,7 @@ class startTimeScan(law.Task):
     def output(self):
         return law.LocalFileTarget(GlobalParams().outputDir+GlobalParams().campaignName+
                                     "_StartTimeScan_"+str(self.tLow)+"_"+str(self.tHigh)+"_"+str(self.tWidth)+"_"+
+                                    "calo_"+str(self.caloNum)+"_"+
                                     "_output_hist_startTimeScan.pickle")
 
     def run(self):
@@ -94,9 +100,48 @@ class startTimeScan(law.Task):
             plt.title(thispar)
             plt.grid()
         plt.tight_layout()
-        plt.show()
+        # plt.show()
 
 
-        data = {'fit_results':fit_results, "plot":(fig,ax), 
-                "startTimeScan":[parNames, startTimes, paramScans, paramScanErrs]}
+        data = {
+            'fit_results':fit_results, 
+            "plot":(fig,ax), 
+            "startTimeScan":[parNames, startTimes, paramScans, paramScanErrs], 
+            "caloNum":self.caloNum, 
+            'tlows':self.tlows,
+            'tWidth':self.tWidth,
+            'tEnd':self.tEnd,
+            'eLow':self.eLow,
+            'eHigh':self.eHigh
+        }
         self.output().dump(data, formatter="pickle")
+
+
+class startTimeScanByCalo(law.Task):
+    def requires(self):
+        for calo in range(1,25):
+            yield startTimeScan(caloNum=calo)
+
+    def output(self):
+        return law.LocalFileTarget(GlobalParams().outputDir+GlobalParams().campaignName+
+                                    "_worker_"+str(self.task_id)+"_"+
+                                    "_output_hist_startTimeScanByCalo.pickle")
+
+    def run(self):
+        input = self.input()
+        print("Raw input:", input)
+    
+        fit_results = {}
+        for i, inputi in enumerate(input):
+            print("Input for the second task:", inputi.path)
+            f = pickle.load(open(inputi.path,"rb"))
+            
+            print(f.keys())
+
+            fit_results[f['caloNum']] = f['startTimeScan']
+
+        output = {
+            "startTimeScan":fit_results
+        }
+
+        self.output().dump(output, formatter="pickle")
