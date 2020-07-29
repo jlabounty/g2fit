@@ -14,6 +14,7 @@ import os
 from rocks_submission import SGEJobTask
 
 from global_params import GlobalParams
+from start_time_scan import *
 
 logger = logging.getLogger('luigi-interface')
 
@@ -66,4 +67,4 @@ if __name__ == '__main__':
 
     tasks = [ rocksWorkflowTest(ilow=1, iHigh=12, outDir="/home/labounty/luigi", dont_remove_tmp_dir=True) ]
     
-    luigi.build(tasks, local_scheduler=False, workers=3)
+    luigi.build(tasks, local_scheduler=False, workers=30)

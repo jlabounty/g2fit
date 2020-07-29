@@ -16,11 +16,15 @@ import matplotlib.pyplot as plt
 from g2Fitter import *
 from g2_fit import g2FitHistAxisCuts
 
+from rocks_submission import *
+from rocks_runner import *
+from rocks_runner import _smart_copy
 
-class startTimeScan(law.Task):
+
+class startTimeScan(SGEJobTask):
 
     tLow = luigi.FloatParameter(default=30.)
-    tHigh = luigi.FloatParameter(default=450.)
+    tHigh = luigi.FloatParameter(default=45.)
     tWidth = luigi.FloatParameter(default=1.)
 
     tEnd = luigi.FloatParameter(default=650.)
@@ -29,6 +33,7 @@ class startTimeScan(law.Task):
     eHigh = luigi.FloatParameter(default=3200.)
 
     caloNum = luigi.IntParameter(default=0)
+    outDir = luigi.Parameter()
 
     def requires(self):
         self.tlows = np.arange(self.tLow, self.tHigh, self.tWidth)
@@ -38,16 +43,23 @@ class startTimeScan(law.Task):
             thiscut = str([['z', self.caloNum-1, self.caloNum-1],['y',self.eLow, self.eHigh]])
         for time in self.tlows:
             xlims=str([time,self.tEnd])
-            yield g2FitHistAxisCuts( axisCuts=thiscut, xlims=xlims )
+            yield g2FitHistAxisCuts( axisCuts=thiscut, xlims=xlims, outDir=self.outDir )
 
     def output(self):
-        return law.LocalFileTarget(GlobalParams().outputDir+GlobalParams().campaignName+
-                                    "_StartTimeScan_"+str(self.tLow)+"_"+str(self.tHigh)+"_"+str(self.tWidth)+"_"+
+        return law.LocalFileTarget( self.outDir+"/StartTimeScan_"+str(self.tLow)+"_"+str(self.tHigh)+"_"+str(self.tWidth)+"_"+
                                     "calo_"+str(self.caloNum)+"_"+
                                     "_output_hist_startTimeScan.pickle")
 
-    def run(self):
+    def work(self):
+
+        working_dir = self._get_working_dir()
+        os.chdir(working_dir)
+        print("Current directory:", os.curdir )
+
         input = self.input()
+        if(not self.run_locally):
+            _smart_copy(inputi.path,working_dir)
+        
         print("Raw input:", input)
     
         fit_results = []
@@ -57,7 +69,10 @@ class startTimeScan(law.Task):
         startTimes = []
         for i, inputi in enumerate(input):
             print("Input for the second task:", inputi.path)
-            opened_hist = pickle.load(open(inputi.path,"rb"))
+            if(self.run_locally):
+                opened_hist = pickle.load(open(inputi.path,"rb"))
+            else:
+                opened_hist = pickle.load(open(inputi.path.split("/")[-1],"rb"))
             
             histName = list(opened_hist)[0]
 
@@ -114,27 +129,45 @@ class startTimeScan(law.Task):
             'eLow':self.eLow,
             'eHigh':self.eHigh
         }
-        self.output().dump(data, formatter="pickle")
+        # self.output().dump(data, formatter="pickle")
+        if(self.run_locally):
+            self.output().dump(data, formatter="pickle")
+        else:
+            self._smart_dump(data, formatter="pickle")
 
 
-class startTimeScanByCalo(law.Task):
+class startTimeScanByCalo(SGEJobTask):
+    outDir = luigi.Parameter()
+
     def requires(self):
         for calo in range(1,25):
-            yield startTimeScan(caloNum=calo)
+            yield startTimeScan(outDir=self.outDir, caloNum=calo)
 
     def output(self):
-        return law.LocalFileTarget(GlobalParams().outputDir+GlobalParams().campaignName+
-                                    "_worker_"+str(self.task_id)+"_"+
+        return law.LocalFileTarget( self.outDir+"/worker_"+str(self.task_id)+"_"+
                                     "_output_hist_startTimeScanByCalo.pickle")
 
-    def run(self):
+    def work(self):
+        # input = self.input()
+
+        working_dir = self._get_working_dir()
+        os.chdir(working_dir)
+        print("Current directory:", os.curdir )
+
         input = self.input()
+        if(not self.run_locally):
+            _smart_copy(inputi.path,working_dir)
+
         print("Raw input:", input)
     
         fit_results = {}
         for i, inputi in enumerate(input):
+
             print("Input for the second task:", inputi.path)
-            f = pickle.load(open(inputi.path,"rb"))
+            if(self.run_locally):
+                f = pickle.load(open(inputi.path,"rb"))
+            else:
+                f = pickle.load(open(inputi.path.split("/")[-1],"rb"))
             
             print(f.keys())
 
@@ -144,4 +177,7 @@ class startTimeScanByCalo(law.Task):
             "startTimeScan":fit_results
         }
 
-        self.output().dump(output, formatter="pickle")
+        if(self.run_locally):
+            self.output().dump(data, formatter="pickle")
+        else:
+            self._smart_dump(data, formatter="pickle")
