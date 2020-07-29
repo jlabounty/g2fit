@@ -133,6 +133,7 @@ def _extract_packages_archive(work_dir):
 def main(args=sys.argv):
     """Run the work() method from the class instance in the file "job-instance.pickle".
     """
+    print("Arguments to runner:", args)
     try:
         tarball = "--no-tarball" not in args
         # Set up logging.

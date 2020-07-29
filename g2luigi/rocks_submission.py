@@ -325,6 +325,7 @@ class SGEJobTask(luigi.Task):
             runner_path, self.tmp_dir, os.getcwd())  # enclose tmp_dir in quotes to protect from special escape chars
         if self.no_tarball:
             job_str += ' "--no-tarball"'
+        print("Job string to be run:", job_str)
 
         # Build qsub submit command
         self.outfile = os.path.join(self.tmp_dir, 'job.out')
@@ -376,6 +377,12 @@ class SGEJobTask(luigi.Task):
                 logger.info('Job status is UNKNOWN!')
                 logger.info('Status is : %s' % sge_status)
                 raise Exception("job status isn't one of ['r', 'qw', 'E*', 't', 'u']: %s" % sge_status)
+    
+    def _get_working_dir(self):
+        if(self.run_locally):
+            return os.curdir
+        else:
+            return os.environ['TMPDIR']
 
 
 class LocalSGEJobTask(SGEJobTask):

@@ -51,7 +51,7 @@ class rocksWorkflowTest(SGEJobTask):
         for inputi in self.input():
             print(inputi)
             inputs.append(inputi.path)
-        data = {"inputs":inputs}
+        data = {"inputs":inputs}    
         # self.output().dump(data, formatter="json")
         self._smart_dump(data, formatter="json")
         

@@ -8,9 +8,12 @@ import boost_histogram as bh
 import ast
 
 from global_params import GlobalParams
+from rocks_submission import *
+from rocks_runner import *
+from rocks_runner import _smart_copy
 
 
-class rootToBoost(law.Task):
+class rootToBoost(SGEJobTask):
     '''
         Takes as input a root histogram with an arbetrary number of axes, makes cuts on those axes, and 
         projects the data within the cuts down into a 1D histogram. This is then stored in a boost format.
@@ -21,11 +24,13 @@ class rootToBoost(law.Task):
 
     timeAxis = luigi.Parameter(default='x')
     axisCuts = luigi.Parameter(default=None, description="['axis string', lower bound, upper bound] -> ['y', 1700, 3200]")
+    outDir = luigi.Parameter()
 
     def output(self):
-        return law.LocalFileTarget(f"{GlobalParams().outputDir}{GlobalParams().campaignName}_{self.histName.replace('/','_')}_{self.axisCuts}_task_{self.task_id}.pickle")
+        # return law.LocalFileTarget(f"{GlobalParams().outputDir}{GlobalParams().campaignName}_{self.histName.replace('/','_')}_{self.axisCuts}_task_{self.task_id}.pickle")
+        return law.LocalFileTarget(f"{self.outDir}/rootToBoost_{self.histName.replace('/','_')}_{self.axisCuts}_task_{self.task_id}.pickle")
 
-    def run(self):
+    def work(self):
         output = self.output()
         output.parent.touch()  # creates the data/ dir
 
@@ -33,8 +38,16 @@ class rootToBoost(law.Task):
         # hi = f[self.histName]
 
         # print(hi)
+        # print("Current directory:", os.curdir )
+        working_dir = self._get_working_dir()
+        os.chdir(working_dir)
+        print("Current directory:", os.curdir )
+        if(self.run_locally):
+            f = r.TFile(self.infile)
+        else:
+            _smart_copy(self.infile, working_dir)
+            f = r.TFile(self.infile.split("/")[-1])
 
-        f = r.TFile(self.infile)
         # f.ls()
         try:
             hi = f.Get(self.histName).Clone(self.histName)
@@ -73,7 +86,10 @@ class rootToBoost(law.Task):
         # print("View:", hi_1D_boost.view())
 
         data = {self.histName:hi_1D_boost}
-        self.output().dump(data, formatter="pickle")
+        if(self.run_locally):
+            self.output().dump(data, formatter="pickle")
+        else:
+            self._smart_dump(data, formatter="pickle")
 
     def TH1ToBoost(self, h):
         contents = []
