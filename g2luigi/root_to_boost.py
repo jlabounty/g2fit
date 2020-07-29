@@ -28,7 +28,7 @@ class rootToBoost(SGEJobTask):
 
     def output(self):
         # return law.LocalFileTarget(f"{GlobalParams().outputDir}{GlobalParams().campaignName}_{self.histName.replace('/','_')}_{self.axisCuts}_task_{self.task_id}.pickle")
-        return law.LocalFileTarget(f"{self.outDir}/rootToBoost_{self.histName.replace('/','_')}_{self.axisCuts}_task_{self.task_id}.pickle")
+        return law.LocalFileTarget(f"{self.outDir}/rootToBoost_{self.histName.replace('/','_')}_task_{self.task_id}.pickle")
 
     def work(self):
         output = self.output()

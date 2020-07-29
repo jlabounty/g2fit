@@ -19,4 +19,4 @@ class GlobalParams(luigi.Config):
     # the additional core defaults, when not specifying config
     core = luigi.interface.core(config)
 
-    print(core.workers)
+    # print(core.workers)

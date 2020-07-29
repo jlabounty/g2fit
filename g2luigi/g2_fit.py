@@ -12,14 +12,18 @@ from root_to_boost import rootToBoost
 from global_params import GlobalParams
 
 from g2Fitter import *
+from rocks_submission import *
+from rocks_runner import *
+from rocks_runner import _smart_copy
 
 
-class g2FitHist(law.Task):
+
+class g2FitHist(SGEJobTask):
     '''
         Takes an output from root_to_boost and fits it in the luigi pipeline
     '''
 
-    sandbox = "bash::fit_env.sh"
+    # sandbox = "bash::fit_env.sh"
 
     xlims = luigi.Parameter(default=None)
     # parNames = luigi.Parameter()
@@ -28,23 +32,32 @@ class g2FitHist(law.Task):
     initialGuess = luigi.Parameter()
     blindingString = luigi.Parameter()
     parameterLimits = luigi.Parameter(default=None)
+    outDir = luigi.Parameter()
 
     def requires(self):
         # for elow in range(500,2300,100):
         #     #using yield means that this can be parallelized across N workers 
         #     #   ('--workers N'  on command line)
         #     yield rootToBoost(axisCuts="[['y', "+str(elow)+", "+str(elow+100)+"]]")
-        return rootToBoost()
+        return rootToBoost(outDir=self.outDir)
 
     def output(self):
-        return law.LocalFileTarget(GlobalParams().outputDir+GlobalParams().campaignName+"_worker_"+str(self.task_id)+"_output_fit.pickle")
+        return law.LocalFileTarget(f"{self.outDir}/_worker_{str(self.task_id)}_output_fit.pickle")
 
-    def run(self):
+    def work(self):
         input = self.input()
         print("Raw input:", input)
 
         #open the histogram object
-        opened_hist = pickle.load(open(input.path,"rb"))
+        working_dir = self._get_working_dir()
+        os.chdir(working_dir)
+        print("Current directory:", os.curdir )
+        
+        if(self.run_locally):
+            opened_hist = pickle.load(open(input.path,"rb"))
+        else:
+            _smart_copy(input.path,working_dir)
+            opened_hist = pickle.load(open(input.path.split("/")[-1],"rb"))
         histName = list(opened_hist)[0]
         print(opened_hist, histName)
         thisHist = opened_hist[ histName ]
@@ -75,7 +88,11 @@ class g2FitHist(law.Task):
         print(fit.fitarg)
 
         data = {histName:fit}
-        self.output().dump(data, formatter="pickle")
+        if(self.run_locally):
+            self.output().dump(data, formatter="pickle")
+        else:
+            self._smart_dump(data, formatter="pickle")
+        # self.output().dump(data, formatter="pickle")
         
         print("Fit complete!")
 
@@ -84,4 +101,4 @@ class g2FitHist(law.Task):
 class g2FitHistAxisCuts(g2FitHist):
   axisCuts = luigi.Parameter(default=None, description="['axis string', lower bound, upper bound] -> ['y', 1700, 3200]")
   def requires(self):
-    return rootToBoost(axisCuts=self.axisCuts) 
+    return rootToBoost(axisCuts=self.axisCuts, outDir=self.outDir, dont_remove_tmp_dir=self.dont_remove_tmp_dir) 

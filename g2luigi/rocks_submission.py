@@ -254,6 +254,7 @@ class SGEJobTask(luigi.Task):
             # Grab luigi and the module containing the code to be run
             packages = [luigi] + [__import__(self.__module__, None, None, 'dummy')]
             create_packages_archive(packages, os.path.join(self.tmp_dir, "packages.tar"))
+            os.system(f"cp ./*cfg {self.tmp_dir}")
 
     def run(self):
         if self.run_locally:
