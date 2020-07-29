@@ -79,9 +79,9 @@ class g2Fitter():
         time  = x
         omega = self.getBlinded(self.blinding_string).paramToFreq(R)
         
-        cCBO = 1-np.exp(-time/lifeCBO)*A1*np.cos(omegaCBO*time + phiCBO1)
-        ACBO = asym * (1 - np.exp(-time/lifeCBO) * A2 * np.cos(omegaCBO*time + phiCBO2))
-        phiCBO = phi + np.exp(-time/lifeCBO)*A3*np.cos(omegaCBO*time + phiCBO3)
+        cCBO = 1-np.exp(-time/lifeCBO)*A1*np.cos(omegaCBO*np.pi*time + phiCBO1)
+        ACBO = asym * (1 - np.exp(-time/lifeCBO) * A2 * np.cos(omegaCBO*np.pi*time + phiCBO2))
+        phiCBO = phi + np.exp(-time/lifeCBO)*A3*np.cos(omegaCBO*np.pi*time + phiCBO3)
         
         return norm * np.exp(-time/life) * cCBO * (1 - ACBO*np.cos(omega*time + phiCBO))
 
@@ -118,10 +118,10 @@ class g2Fitter():
         time  = x
         omega = self.getBlinded(self.blinding_string).paramToFreq(R)
         
-        cCBO = 1-np.exp(-time/lifeCBO)*A1*np.cos(omegaCBO*time + phiCBO1)
-        ACBO = asym * (1 - np.exp(-time/lifeCBO) * A2 * np.cos(omegaCBO*time + phiCBO2))
-        phiCBO = phi + np.exp(-time/lifeCBO)*A3*np.cos(omegaCBO*time + phiCBO3)
-        cVW = 1 - Avw*np.exp(-time/lifeVW)*np.cos(omegaVW*time + phiVW)
+        cCBO = 1-np.exp(-time/lifeCBO)*A1*np.cos(omegaCBO*np.pi*time + phiCBO1)
+        ACBO = asym * (1 - np.exp(-time/lifeCBO) * A2 * np.cos(omegaCBO*np.pi*time + phiCBO2))
+        phiCBO = phi + np.exp(-time/lifeCBO)*A3*np.cos(omegaCBO*np.pi*time + phiCBO3)
+        cVW = 1 - Avw*np.exp(-time/lifeVW)*np.cos(omegaVW*np.pi*time + phiVW)
         
         return norm * np.exp(-time/life) * cCBO * cVW * (1 - ACBO*np.cos(omega*time + phiCBO))
 
@@ -162,10 +162,10 @@ class g2Fitter():
         time  = x
         omega = self.getBlinded(self.blinding_string).paramToFreq(R)
         
-        cCBO = 1-np.exp(-time/lifeCBO)*A1*np.cos(omegaCBO*time + phiCBO1)
-        ACBO = asym * (1 - np.exp(-time/lifeCBO) * A2 * np.cos(omegaCBO*time + phiCBO2))
-        phiCBO = phi + np.exp(-time/lifeCBO)*A3*np.cos(omegaCBO*time + phiCBO3)
-        cVW = 1 - Avw*np.exp(-time/lifeVW)*np.cos(omegaVW*time + phiVW)
+        cCBO = 1-np.exp(-time/lifeCBO)*A1*np.cos(omegaCBO*np.pi*time + phiCBO1)
+        ACBO = asym * (1 - np.exp(-time/lifeCBO) * A2 * np.cos(omegaCBO*np.pi*time + phiCBO2))
+        phiCBO = phi + np.exp(-time/lifeCBO)*A3*np.cos(omegaCBO*np.pi*time + phiCBO3)
+        cVW = 1 - Avw*np.exp(-time/lifeVW)*np.cos(omegaVW*np.pi*time + phiVW)
         
         return (
                 norm * np.exp(-time/life) * cCBO * cVW * (1 - ACBO*np.cos(omega*time + phiCBO))
@@ -213,11 +213,11 @@ class g2Fitter():
         time  = x
         omega = self.getBlinded(self.blinding_string).paramToFreq(R)
         
-        cCBO = 1-np.exp(-time/lifeCBO)*A1*np.cos(omegaCBO*time + phiCBO1)
-        ACBO = asym * (1 - np.exp(-time/lifeCBO) * A2 * np.cos(omegaCBO*time + phiCBO2))
-        phiCBO = phi + np.exp(-time/lifeCBO)*A3*np.cos(omegaCBO*time + phiCBO3)
-        cVW = 1 - Avw*np.exp(-time/lifeVW)*np.cos(omegaVW*time + phiVW)
-        c2CBO = 1 - A2CBO*np.exp(-time/life2CBO)*np.cos(omegaCBO*time + phi2CBO)
+        cCBO = 1-np.exp(-time/lifeCBO)*A1*np.cos(omegaCBO*np.pi*time + phiCBO1)
+        ACBO = asym * (1 - np.exp(-time/lifeCBO) * A2 * np.cos(omegaCBO*np.pi*time + phiCBO2))
+        phiCBO = phi + np.exp(-time/lifeCBO)*A3*np.cos(omegaCBO*np.pi*time + phiCBO3)
+        cVW = 1 - Avw*np.exp(-time/lifeVW)*np.cos(omegaVW*np.pi*time + phiVW)
+        c2CBO = 1 - A2CBO*np.exp(-time/life2CBO)*np.cos(2*omegaCBO*np.pi*time + phi2CBO)
         
         return (
                 norm * np.exp(-time/life) * cCBO * cVW * (1 - ACBO*np.cos(omega*time + phiCBO))
@@ -271,12 +271,12 @@ class g2Fitter():
         time  = x
         omega = self.getBlinded(self.blinding_string).paramToFreq(R)
         
-        cCBO = 1-np.exp(-time/lifeCBO)*A1*np.cos(omegaCBO*time + phiCBO1)
-        ACBO = asym * (1 - np.exp(-time/lifeCBO) * A2 * np.cos(omegaCBO*time + phiCBO2))
-        phiCBO = phi + np.exp(-time/lifeCBO)*A3*np.cos(omegaCBO*time + phiCBO3)
-        cVW = 1 - Avw*np.exp(-time/lifeVW)*np.cos(omegaVW*time + phiVW)
-        cy = 1 - Ay*np.exp(-time/lifey)*np.cos(omegay*time + phiy)
-        c2CBO = 1 - A2CBO*np.exp(-time/life2CBO)*np.cos(omegaCBO*time + phi2CBO)
+        cCBO = 1-np.exp(-time/lifeCBO)*A1*np.cos(omegaCBO*np.pi*time + phiCBO1)
+        ACBO = asym * (1 - np.exp(-time/lifeCBO) * A2 * np.cos(omegaCBO*np.pi*time + phiCBO2))
+        phiCBO = phi + np.exp(-time/lifeCBO)*A3*np.cos(omegaCBO*np.pi*time + phiCBO3)
+        cVW = 1 - Avw*np.exp(-time/lifeVW)*np.cos(omegaVW*np.pi*time + phiVW)
+        cy = 1 - Ay*np.exp(-time/lifey)*np.cos(omegay*np.pi*time + phiy)
+        c2CBO = 1 - A2CBO*np.exp(-time/life2CBO)*np.cos(2*omegaCBO*np.pi*time + phi2CBO)
         
         return (
                 norm * np.exp(-time/life) * cCBO * cVW * (1 - ACBO*np.cos(omega*time + phiCBO))
@@ -827,14 +827,21 @@ class g2Fitter():
             ax[0].plot(xs,points,"-")
             ax[0].set_title("Input function")
             ax[1].set_title("FFT result")
-            ax[1].plot([np.abs(x) for x in freq],np.abs(ding),'.:',label='FFT Result')
+            ax[1].plot([np.abs(x) for x in freq],np.abs(ding),'-',label='FFT Result')
+            omega_a_ref = 0.2291 #MHZ
+            plt.plot([omega_a_ref, omega_a_ref],[0,10**10], ":", label=r"$\omega_{a} = 0.229$")
+            for i, name in enumerate(self.parNames):
+                if("mega" in name):
+                    plt.plot([self.values[i], self.values[i]],[0,10**10], ":", 
+                             label=convertRootLabelsToPython(name)+f"$ = {round(self.values[i],3)}$")
             #ax[1].set_xlim(0,50)
             if(logy):
                 ax[1].set_yscale("log")
             plt.xlabel("Frequency [MHz]")
+            ax[1].set_ylim(np.min( np.abs(ding) ), 1.5*np.max( np.abs(ding) ))
             #plt.xlim(0,6.7157787731503555 / 2)# *10.**6)
             plt.legend()
-            plt.suptitle("FFT Of Fit Result", y=1.02, fontsize=18)
+            # plt.suptitle("FFT Of Fit Result", y=1.02, fontsize=18)
             plt.tight_layout()
             plt.show()
 
