@@ -14,10 +14,45 @@ from iminuit.cost import LeastSquares
 from iminuit.cost import ExtendedBinnedNLL
 from matplotlib import pyplot as plt
 from iminuit import Minuit
+from iminuit.util import describe, make_func_code
+
 
 # g-2 blinding software
 from BlindersPy3 import Blinders
 from BlindersPy3 import FitType
+
+
+from g2Reader import *
+
+
+#least squares implementation stolen from 
+# https://github.com/scikit-hep/iminuit/blob/master/tutorial/generic_least_squares_function.ipynb
+class LeastSquaresBase:
+    """
+    Generic least-squares cost function.
+    """
+    def __init__(self, model, x, y, yerr, verbose=0):
+        self.model = model  # model predicts y for given x
+        self.x = np.array(x)
+        self.y = np.array(y)
+        if(yerr is None):
+            yerr = 1
+        else:
+            self.yerr = np.array(yerr)
+        self.verbose = verbose
+
+    def __call__(self, *par):  # we accept a variable number of model parameters
+        ym = self.model(self.x, *par)
+
+        chi2 = np.nansum(((self.y - ym)/self.yerr)**2)
+        if(self.verbose > 0):
+            print("Chi^2 Statistic for this iteration:", chi2)
+        return chi2
+
+class BetterLeastSquares(LeastSquaresBase):
+    def __init__(self, model, x, y, yerr):
+        super().__init__(model, x, y, yerr, verbose=0)
+        self.func_code = make_func_code(describe(model)[1:])
 
 
 class g2Fitter():
@@ -48,8 +83,36 @@ class g2Fitter():
         
         time  = x
         omega = self.getBlinded(self.blinding_string).paramToFreq(R)
+
+        # print(x)
         
-        return norm * np.exp(-time/life) * (1 - asym*np.cos(omega*time + phi))
+        y = norm * np.exp(-time/life) * (1 - asym*np.cos(omega*time + phi))
+        # print(y[:10])
+        return y
+
+    def fixed_5par(self,x,p):
+        '''
+            Five parameter g-2 omega_a fit with omega_a fixed to the reference value
+        '''
+        # print(self, type(self))
+        npars = 5
+        assert len(self.initial_guess) == npars
+        self.parNames = ['N', '#tau', 'A', 'R', '#phi']
+        norm  = p[0]
+        life  = p[1]
+        asym  = p[2]
+        R     = p[3]
+        phi   = p[4]
+        
+        time  = x
+        # omega = self.getBlinded(self.blinding_string).paramToFreq(R)
+        omega = self.getBlinded(self.blinding_string).referenceValue()
+
+        # print(x)
+        
+        y = norm * np.exp(-time/life) * (1 - asym*np.cos(omega*time + phi))
+        # print(y[:10])
+        return y
 
     def blinded_13par(self,x,p):
         '''
@@ -291,6 +354,7 @@ class g2Fitter():
         dicti = {
             "custom":None,
             "5par"  :self.blinded_5par,
+            "5parfixed"  :self.fixed_5par,
             "13par" :self.blinded_13par,
             '17par' :self.blinded_17par,
             "18par" :self.blinded_18par,
@@ -303,7 +367,8 @@ class g2Fitter():
     def cost_functons(self,name):
         dict_cost_functons = {
             "LeastSquares":LeastSquares,
-            "NLL":ExtendedBinnedNLL
+            "NLL":ExtendedBinnedNLL,
+            "BLS":BetterLeastSquares
             #TODO: #2 Add custom minimizer which takes advantage of the kernel method
         }
         return dict_cost_functons[name]
@@ -334,11 +399,25 @@ class g2Fitter():
 
         return h
 
+    @staticmethod
+    @jit(nopython=True)
+    def zip_1d(a,b):
+        '''
+            We can jit this to make it a bit faster.
+            Turns the uproot hist into the correct boost format by combining means/variances into one object
+        '''
+        output = np.zeros((*a.shape,2))
+        for i, a1 in enumerate(a):
+            output[i] = [a1, b[i]]
+        return output
+
     def __init__(self, fit_name, cost_name, blinding_string, boost_hist, initial_guess, 
                        xlims=None, useError=False, verbose=1, uniqueName="", do_iterative_fit=False,
                        fit_list=None, fit_limits = None, final_unlimited_fit = False,
-                       custom_func=None, parNames=None, triples_hist=None):
-        print("Initializing fit!")
+                       custom_func=None, parNames=None, triples_hist=None, ignore_zeros=False):
+        self.verbose = verbose
+        if(self.verbose > 0):
+            print("Initializing fit!")
 
         self.uniqueName = uniqueName
         self.fit_name = fit_name
@@ -347,9 +426,21 @@ class g2Fitter():
         self.blind = None # to be set up later once we initialize the fit
 
         #we expect the boost_hist to be 1D
-        print(boost_hist.axes.size, boost_hist.ndim)
+        if(self.verbose > 0):
+            print(boost_hist.axes.size, boost_hist.ndim)
         assert (boost_hist.ndim is 1)
-        self.h = boost_hist.copy() #ensure that we can pack things up at the end by creating copy
+        try:
+            boost_hist.view().value
+            self.h = boost_hist.copy() #ensure that we can pack things up at the end by creating copy
+        except:
+            # need to convert this histogram into a weighted storage.
+            if(self.verbose > 0):
+                print("Converting unweighted histogram into expected format")
+            a = np.array(boost_hist.view())
+            b = np.zeros_like(a)
+            self.h = bh.Histogram(*boost_hist.axes, storage=bh.storage.Weight() )
+            ding =  self.zip_1d(a,b)
+            self.h[:] = ding
         if(triples_hist is not None):
             assert (triples_hist.ndim is 1) #Kloss hist should also be 1D
             self.h_Kloss = self.triples_to_Kloss( triples_hist )
@@ -370,7 +461,8 @@ class g2Fitter():
         if(xlims is not None):
             self.binlims = [self.h.axes[0].index(x) for x in xlims]
             self.xlims_true = [self.h.axes[0].bin(x) for x in self.binlims]
-            print(xlims, "->",self.binlims, "(",self.xlims_true,")")
+            if(self.verbose > 0):
+                print(xlims, "->",self.binlims, "(",self.xlims_true,")")
         else:
             self.binlims = [0, len(self.h.axes[0].centers)]
 
@@ -382,8 +474,14 @@ class g2Fitter():
         else:
             #needs to be non-zero for least squares minimizer to work
             #default to  sqrt(bin content)
-            self.yerr = np.sqrt( self.h.view().value[self.binlims[0]:self.binlims[1]] ) 
+            self.yerr = np.sqrt( self.h.view().value[self.binlims[0]:self.binlims[1]] )  
+            self.yerr[self.yerr == 0] = np.nan
         self.xerr = None
+
+        if(ignore_zeros):
+            self.y[self.y == 0] = np.nan
+
+        # print(self.x, self.y, self.yerr)
 
         # self.fit_function = self.fit_functions[self.fit_name]
         if(self.fit_name is not "custom"):
@@ -446,28 +544,41 @@ class g2Fitter():
             self.residualsInRange = self.residuals
             self.pullsInRange = self.pulls
 
-        print("Residuals computed!")
+        if(self.verbose > 0):
+            print("Residuals computed!")
 
     def iterative_fit(self, nFit=2):
-        print("Starting iterative fit")
+        if(self.verbose > 0):
+            print("Starting iterative fit")
 
         #create a minuit object
+        if(self.verbose > 0):
+            print("Cost function:", self.cost_name)
         if(self.cost_name is "LeastSquares"):
             self.cost_function = (self.getCost())(self.x,self.y,self.yerr, self.fit_function, verbose=0)
         elif(self.cost_name is "NLL"):
-            self.cost_function = (self.getCost())(self.x,self.h.axes[0].edges, self.fit_function )
+            edges = self.h.axes[0].edges[self.binlims[0]:self.binlims[1]+1]
+            if(self.verbose > 0):
+                print(len(self.y), len(edges))
+            self.cost_function = (self.getCost())(self.y, edges, self.fit_function )
+        elif(self.cost_name is "BLS"):
+            self.cost_function = (self.getCost())(self.fit_function, self.x, self.y, self.yerr)
+        else:
+            raise ValueError("Undefined cost function:", self.cost_name)
         # self.m = Minuit.from_array_func( self.cost_function, start=self.initial_guess, 
         #                        name=self.parNames, errordef=1)
         self.m = (self.getMinuit())( self.cost_function, start=self.initial_guess, 
                                      name=self.parNames, errordef=1, limit=self.fit_limits)
         
         # print(self.m, self.cost_function)
-        print(self.m.params)
+        if(self.verbose > 0):
+            print(self.m.params)
         #loop over the parameters which should be masked + a final unmasked version
         for mask in self.fit_list+[len(self.initial_guess)]:
-            print(mask)
-            print('Fitting using these pars:', self.parNames[:mask])
-            print("   with values:", self.initial_guess[:mask])
+            if(self.verbose > 0):
+                print(mask)
+                print('Fitting using these pars:', self.parNames[:mask])
+                print("   with values:", self.initial_guess[:mask])
 
             self.m.fixed[:] = True
             self.m.fixed[:mask] = False
@@ -477,18 +588,20 @@ class g2Fitter():
             self.m.hesse()
             self.m.minos()
             self.store_fit_values(self.m)
-
-            print(self.m.params)
+            if(self.verbose > 0):
+                print(self.m.params)
 
         if(self.final_fit_unlimited):
             #if this option is set, do a final unlimited fit
             # self.m.limits[:] = [None for i in range(len(self.initial_guess))]
             theseargs = self.m.fitarg
-            print(theseargs)
+            if(self.verbose > 0):
+                print(theseargs)
             for key in theseargs:
                 if("limit_" in key):
                     theseargs[key] = None
-            print(theseargs)
+            if(self.verbose > 0):
+                print(theseargs)
 
             #unable to unset limits in minuit??? so have to create a new object...
             self.m = (self.getMinuit())(self.cost_function, start=self.initial_guess, name=self.parNames, **theseargs)
@@ -499,13 +612,15 @@ class g2Fitter():
             self.m.minos()
             self.store_fit_values(self.m)
 
-            print(self.m.params)
+            if(self.verbose > 0):
+                print(self.m.params)
 
-
-        print("All done!")
+        if(self.verbose > 0):
+            print("All done!")
 
     def do_single_fit(self, nFit=2):
-        print("Starting fit...")
+        if(self.verbose > 0):
+            print("Starting fit...")
 
         #TODO: #1 When minuit is pickleable, can transition these to being class functions and ax 'load_fit'
         self.cost_function = (self.getCost())(self.x,self.y,self.yerr, self.fit_function, verbose=0)
@@ -514,31 +629,36 @@ class g2Fitter():
         self.m = (self.getMinuit())( self.cost_function, start=self.initial_guess, 
                                      name=self.parNames, errordef=1, limit=self.fit_limits)
 
-        
-        print(self.m, self.cost_function)
-        print(self.m.params)
+        if(self.verbose > 0):
+            print(self.m, self.cost_function)
+            print(self.m.params)
 
         for i in range(nFit):
             self.m.migrad()
         self.m.hesse()
+        self.m.minos()
 
-        print(self.m.params)
+        if(self.verbose > 0):
+            print(self.m.params)
 
         # we cannot pickle the Minuit object directly, so we need to save all of the things we find important!
         # print(m.values)
         self.store_fit_values(self.m)
 
-        print(self.fitarg)
+        if(self.verbose > 0):
+            print(self.fitarg)
 
         #in order to pickle, need to delete
         # del self.m 
         # del self.cost_function
         
-        print("Fit complete!")
+        if(self.verbose > 0):
+            print("Fit complete!")
 
     # get around the fact that we can't save the fit object directly by loading it back up when we need it.
     def load_fit(self, nFit=2):
-        print("WARNING: You will not be able to pickle this file after executing this function")
+        if(self.verbose > 0):
+            print("WARNING: You will not be able to pickle this file after executing this function")
         cost_function = (self.getCost())(self.x,self.y,self.yerr, self.fit_function, verbose=0)
         self.m = Minuit.from_array_func(cost_function, self.values, name=self.parNames, **self.fitarg)
         for i in range(nFit):
@@ -548,7 +668,8 @@ class g2Fitter():
         del self.m 
         del self.cost_function
 
-        print(self,"can now be pickled")
+        if(self.verbose > 0):
+            print(self,"can now be pickled")
 
     # --------------------------------------------------------
     # Plotting utility functions
@@ -646,8 +767,8 @@ class g2Fitter():
         #     self.drawConfidenceIntervals(ax,"blue", "95% Confidence Level")
         ax.grid()
         if(yrange[0] is None):
-            ymean = np.mean(self.y)
-            ystd = np.std(self.y)
+            ymean = np.nanmean(self.y)
+            ystd = np.nanstd(self.y)
             ax.set_ylim(ymean - ystd*2, ymean + ystd*2)
         else:
             ax.set_ylim(yrange[0][0],yrange[0][1])
@@ -668,8 +789,8 @@ class g2Fitter():
         ax.set_ylabel(resid_title)
         ax.grid()
         if(yrange[1] is None):
-            ymean = np.mean(self.residuals)
-            ystd = np.std(self.residuals)
+            ymean = np.nanmean(self.residuals)
+            ystd = np.nanstd(self.residuals)
             ax.set_ylim(ymean - ystd*2, ymean + ystd*2)
         else:
             ax.set_ylim(yrange[1][0],yrange[1][1])
@@ -692,7 +813,7 @@ class g2Fitter():
         #     fitHistGaussian(hist1, ax, True, True)
         #     ax.legend()
 
-        plt.suptitle(title, y=1.0, fontsize=18)
+        # plt.suptitle(title, y=1.0, fontsize=18)
         plt.tight_layout()
         
         return (fig, axs)
@@ -706,7 +827,10 @@ class g2Fitter():
         import numpy as np
         #from standardInclude import labelFit
 
-        if(xrange is not None):
+        if(scaleFactor == 1):
+            xs = self.x
+            ys = self.fity
+        elif(xrange is not None):
             x0 = xrange[0]
             xn = xrange[1]
             xs = np.linspace(x0,xn,scaleFactor)
