@@ -58,7 +58,7 @@ class startTimeScan(SGEJobTask):
 
         input = self.input()
         if(not self.run_locally):
-            _smart_copy(inputi.path,working_dir)
+            _smart_copy([inputi.path for inputi in input],working_dir)
         
         print("Raw input:", input)
     
@@ -96,31 +96,31 @@ class startTimeScan(SGEJobTask):
                 paramScanErrs[param].append(thisHist.errors[j])
             startTimes.append(thisHist.xlims_true[0][0])
 
-        fig,ax = plt.subplots(len(parNames),1,figsize=(15,6), sharex=True)
-        for i,axi in enumerate(ax):
-            plt.sca(axi)
-            thispar = parNames[i]
-            # print(len(startTimes))
-            # print(len(paramScans[thispar]))
-            plt.errorbar(startTimes, paramScans[thispar], yerr=paramScanErrs[thispar], fmt=".:" )
-            # print(paramScanErrs[thispar])
+        # fig,ax = plt.subplots(len(parNames),1,figsize=(15,6), sharex=True)
+        # for i,axi in enumerate(ax):
+        #     plt.sca(axi)
+        #     thispar = parNames[i]
+        #     # print(len(startTimes))
+        #     # print(len(paramScans[thispar]))
+        #     plt.errorbar(startTimes, paramScans[thispar], yerr=paramScanErrs[thispar], fmt=".:" )
+        #     # print(paramScanErrs[thispar])
             
-            #kawall band as in Eq. 6.16 of Aarons thesis
-            kawall_band = [np.sqrt( x**2 - paramScanErrs[thispar][0]**2  ) for x in paramScanErrs[thispar]]
-            # print(kawall_band)
-            plt.fill_between(startTimes, 
-                         [paramScans[thispar][0] + kawall_band[i] for i,x in enumerate(startTimes)], 
-                         [paramScans[thispar][0] - kawall_band[i] for i,x in enumerate(startTimes)],
-                         alpha = 0.3, interpolate=True, color='red')
-            plt.title(thispar)
-            plt.grid()
-        plt.tight_layout()
+        #     #kawall band as in Eq. 6.16 of Aarons thesis
+        #     kawall_band = [np.sqrt( x**2 - paramScanErrs[thispar][0]**2  ) for x in paramScanErrs[thispar]]
+        #     # print(kawall_band)
+        #     plt.fill_between(startTimes, 
+        #                  [paramScans[thispar][0] + kawall_band[i] for i,x in enumerate(startTimes)], 
+        #                  [paramScans[thispar][0] - kawall_band[i] for i,x in enumerate(startTimes)],
+        #                  alpha = 0.3, interpolate=True, color='red')
+        #     plt.title(thispar)
+        #     plt.grid()
+        # plt.tight_layout()
         # plt.show()
 
 
         data = {
             'fit_results':fit_results, 
-            "plot":(fig,ax), 
+            # "plot":(fig,ax), 
             "startTimeScan":[parNames, startTimes, paramScans, paramScanErrs], 
             "caloNum":self.caloNum, 
             'tlows':self.tlows,
@@ -156,7 +156,7 @@ class startTimeScanByCalo(SGEJobTask):
 
         input = self.input()
         if(not self.run_locally):
-            _smart_copy(inputi.path,working_dir)
+            _smart_copy([inputi.path for inputi in input],working_dir)
 
         print("Raw input:", input)
     
@@ -173,7 +173,7 @@ class startTimeScanByCalo(SGEJobTask):
 
             fit_results[f['caloNum']] = f['startTimeScan']
 
-        output = {
+        data = {
             "startTimeScan":fit_results
         }
 
