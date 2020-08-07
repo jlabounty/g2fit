@@ -40,6 +40,12 @@ import tarfile
 from pathlib import Path
 import random 
 import time
+import numpy
+
+
+from tarpickle import *
+from tarpickle import TarPickleFormatter
+law.target.formatter.get_formatter("tarpickle")
 
 
 def _do_work_on_compute_node(work_dir, tarball=True):
@@ -88,6 +94,8 @@ def _smart_copy(from_paths, to_paths, queue_dir="/home/labounty/stupid_queue/"):
             sleep 10
         done 
     '''
+    print("Initiating smart copy of:", from_paths)
+    print("                      to:", to_paths)
     if type(from_paths) is not list:
         from_paths = [from_paths]
         to_paths = [to_paths]
@@ -98,7 +106,7 @@ def _smart_copy(from_paths, to_paths, queue_dir="/home/labounty/stupid_queue/"):
     waiting_for_copy = True
     while( waiting_for_copy ):
         nfiles = len(os.listdir(queue_dir))
-        if(nfiles < 10):
+        if(nfiles < 15):
             thisFile = '%016x' % random.getrandbits(64)
             Path(queue_dir+thisFile).touch()
             for from_path, to_path in zip(from_paths, to_paths):
@@ -108,7 +116,7 @@ def _smart_copy(from_paths, to_paths, queue_dir="/home/labounty/stupid_queue/"):
             waiting_for_copy = False
         else:
             print("waiting... (nfiles: ", nfiles,")")
-            time.sleep(10)
+            time.sleep( numpy.random.randint(1,15) )
 
 
 

@@ -98,14 +98,19 @@ import logging
 import random
 import pickle
 from pathlib import Path
+import numpy
 
-
+import law
 import luigi
 from luigi.contrib.hadoop import create_packages_archive
 import rocks_runner as sge_runner
 
 logger = logging.getLogger('luigi-interface')
 logger.propagate = 0
+
+from tarpickle import *
+from tarpickle import TarPickleFormatter
+# law.target.formatter.get_formatter("tarpickle")
 
 POLL_TIME = 5  # decided to hard-code rather than configure here
 
@@ -282,16 +287,16 @@ class SGEJobTask(luigi.Task):
         waiting_for_copy = True
         while( waiting_for_copy ):
             nfiles = len(os.listdir(queue_dir))
-            if(nfiles < 10):
+            if(nfiles < 15):
                 print("Processing dump")
                 thisFile = '%016x' % random.getrandbits(64)
                 Path(queue_dir+thisFile).touch()
-                self.output().dump(data, formatter=formatter)
+                self.output().dump(data, formatter=formatter, protocol=-1)
                 Path(queue_dir+thisFile).unlink()
                 waiting_for_copy = False
             else:
                 print("waiting... (nfiles: ", nfiles,")")
-                time.sleep(10)
+                time.sleep( numpy.random.randint(1,15) )
 
     def _dump(self, out_dir=''):
         """Dump instance to file."""
