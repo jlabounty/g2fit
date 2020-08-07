@@ -4,6 +4,8 @@ import numba
 from numba import jit
 import numpy as np
 import ROOT as r
+import matplotlib.patches as mpatches
+
 
 
 check_hist_cpp = '''
@@ -197,8 +199,7 @@ class g2Histogram():
         '''
         output = np.zeros((*a.shape,2))
         for i, a1 in enumerate(a):
-            for j, a2 in enumerate(a1):
-                    output[i,j] = [a3, b[i,j]]
+            output[i] = [a, b[i]]
         return output
 
     @staticmethod
@@ -211,7 +212,7 @@ class g2Histogram():
         output = np.zeros((*a.shape,2))
         for i, a1 in enumerate(a):
             for j, a2 in enumerate(a1):
-                output[i,j] = [a3, b[i,j]]
+                output[i,j] = [a2, b[i,j]]
         return output
 
     @staticmethod
@@ -252,7 +253,7 @@ class g2Histogram():
             fig,ax = plt.subplots(figsize=(8,5))
         plt.sca(ax)
         if(SetLogz):
-            norm = matplotlib.colors.SymLogNorm(linthresh=linthresh) #maybe replace with symlognorm?
+            norm = matplotlib.colors.SymLogNorm(linthresh=linthresh) 
         else:
             norm = None
 
@@ -293,3 +294,113 @@ class g2Histogram():
             array, err_array, array.size, hist3d.GetName().encode())
         
         return array, err_array
+
+
+def plothist_1d(hist, fmt='hist', xerr=True, histtype='step', orientation='vertical', label=None, **kwargs):
+
+    import matplotlib.pyplot as plt 
+    import matplotlib 
+
+    try:
+        ys = hist.view().value 
+    except:
+        ys = hist.view()
+    xs = hist.axes[0].centers
+    
+    if(xerr):
+        widths = hist.axes[0].widths/2.0
+    else:
+        widths=0
+
+    if(fmt is not 'hist'):
+        ding = plt.errorbar(xs,ys,xerr=widths, fmt=fmt,label=label)
+    else:
+        xs = hist.axes[0].centers
+        edges = hist.axes[0].edges
+        ding = plt.hist(x=xs, bins=edges, weights=ys, histtype=histtype, orientation=orientation,label=label)
+    return ding
+
+def plothist_2d(ax=None, SetLogz=True, linthresh=1, hist=None, vmin=None, vmax=None, label=None, **kwargs):
+    import matplotlib.pyplot as plt 
+    import matplotlib 
+    import matplotlib.lines as mlines
+
+    if(ax is None):
+        fig,ax = plt.subplots(figsize=(8,5))
+    plt.sca(ax)
+    if(SetLogz):
+        norm = matplotlib.colors.SymLogNorm(linthresh=linthresh, vmin=vmin, vmax=vmax) 
+    else:
+        norm = None
+    
+    blue_line = mlines.Line2D([1], [1], color='blue', marker='*',
+                          markersize=15, label='Blue stars')
+    ax.add_artist(blue_line)
+    try:
+        return plt.pcolormesh(*hist.axes.edges.T, hist.view().T, norm=norm, label=label)
+    except:
+        return plt.pcolormesh(*hist.axes.edges.T, hist.view().value.T, norm=norm, vmin=vmin,vmax=vmax, label=label)
+    
+def plothist_2d_withProjections(SetLogz=True, linthresh=1, hist=None, label=None, **kwargs):
+    import matplotlib.pyplot as plt 
+    import matplotlib 
+
+    # definitions for the axes
+    left, width = 0.1, 0.65
+    bottom, height = 0.1, 0.65
+    bottom_h = left_h = left + width + 0.02
+    
+    rect_scatter = [left, bottom, width, height]
+    rect_histx = [left, bottom_h, width, 0.2]
+    rect_histy = [left_h, bottom, 0.2, height]
+    rect_histcol = [left_h +0.2, bottom, 0.2, height]
+
+    # start with a rectangular Figure
+    fig = plt.figure(1, figsize=(10, 8))
+
+    axScatter = plt.axes(rect_scatter)
+    axHistx = plt.axes(rect_histx, sharex=axScatter)
+    axHisty = plt.axes(rect_histy, sharey=axScatter)
+    
+    plt.sca(axScatter)
+    
+    
+    if(SetLogz):
+        norm = matplotlib.colors.SymLogNorm(linthresh=linthresh) 
+    else:
+        norm = None
+    try:
+        ding = plt.pcolormesh(*hist.axes.edges.T, hist.view().T, norm=norm,label=label)
+    except:
+        ding = plt.pcolormesh(*hist.axes.edges.T, hist.view().value.T, norm=norm,label=label)
+        
+    
+        
+    plt.sca(axHisty)
+    h_y = hist[::sum,:]
+    plothist_1d(h_y, orientation='horizontal')
+    plt.colorbar(ding)
+    h_x = hist[:,::sum]
+    plt.sca(axHistx)
+    plothist_1d(h_x)
+
+    plt.sca(axScatter)
+    
+    [label.set_visible(False) for label in axHistx.get_xticklabels()]
+    [label.set_visible(False) for label in axHisty.get_yticklabels()]
+    
+    return (fig, [axScatter, axHistx, axHisty])
+
+
+def plothist(hist, do_2d_projections=False, **kwargs):
+    ndim = len(hist.axes.size)
+    if ndim == 1:
+        return plothist_1d(hist, **kwargs)
+    elif ndim == 2:
+        if(do_2d_projections):
+            return plothist_2d_withProjections(hist=hist, **kwargs)
+        else:
+            return plothist_2d(hist=hist, **kwargs)
+    else:
+        raise NotImplementedError("Only 1D and 2D histograms are currently implemented")
+
